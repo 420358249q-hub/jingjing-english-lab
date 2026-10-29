@@ -1533,11 +1533,53 @@ kbd {
   gap: 20px;
 }
 
-.catalog-top-bar {
+.catalog-control-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 6px;
+}
+
+.catalog-panel-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap;
+}
+
+.catalog-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.catalog-custom-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: rgba(37, 99, 235, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #60a5fa;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.catalog-custom-btn:hover {
+  background: rgba(37, 99, 235, 0.3);
+  border-color: #60a5fa;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+.catalog-category-wrap {
+  width: 100%;
   padding-bottom: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
@@ -1545,12 +1587,10 @@ kbd {
 .catalog-category-pills {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  overflow-x: auto;
-  padding: 4px 2px;
-  scrollbar-width: none;
+  padding: 2px 0;
 }
-.catalog-category-pills::-webkit-scrollbar { display: none; }
 
 .catalog-cat-pill {
   display: inline-flex;
@@ -1600,21 +1640,11 @@ kbd {
   color: #ffffff;
 }
 
-.catalog-search-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: -6px;
-  margin-bottom: 4px;
-  flex-wrap: wrap;
-}
-
 .catalog-search-wrap {
   position: relative;
   flex: 1;
   min-width: 280px;
-  max-width: 600px;
+  max-width: 620px;
   display: flex;
   align-items: center;
 }
@@ -1682,25 +1712,12 @@ kbd {
   border: 1px solid rgba(255, 255, 255, 0.06);
   padding: 8px 14px;
   border-radius: 10px;
+  white-space: nowrap;
 }
 
 .catalog-stats-badge strong {
   color: #38bdf8;
   font-weight: 600;
-}
-
-.catalog-request-link {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #94a3b8;
-  font-size: 13px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: color 0.2s;
-}
-.catalog-request-link:hover {
-  color: #60a5fa;
 }
 
 .course-grid {

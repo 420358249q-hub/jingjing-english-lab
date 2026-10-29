@@ -80,42 +80,49 @@
 
         <!-- Tier 1: 课程大厅 (Course Catalog) -->
         <section v-if="courseViewMode === 'catalog'" class="course-catalog">
-          <div class="catalog-top-bar">
-            <div class="catalog-category-pills">
-              <button
-                v-for="cat in COURSE_CATEGORIES"
-                :key="cat.id"
-                class="catalog-cat-pill"
-                :class="{ active: courseSelectedCategory === cat.id }"
-                @click="courseSelectedCategory = cat.id">
-                <i v-if="cat.icon" :class="'ph-bold ph-' + cat.icon" class="cat-pill-icon"></i>
-                <span>{{ cat.label }}</span>
-                <span class="cat-pill-count">{{ getCourseCategoryCount(cat.id) }}</span>
-              </button>
-            </div>
-            <div class="catalog-request-link" @click="openCustomModal">
-              <i class="ph-bold ph-plus-circle"></i>
-              <span>想要更多课程</span>
-            </div>
-          </div>
+          <!-- 课程大厅顶部功能看板 (Unified Control Bar) -->
+          <div class="catalog-control-panel">
+            <!-- 功能操作行：即时搜索 + 数据统计 + 定制新课程按钮 -->
+            <div class="catalog-panel-row">
+              <div class="catalog-search-wrap">
+                <i class="ph-bold ph-magnifying-glass search-icon"></i>
+                <input
+                  v-model="courseSearchQuery"
+                  type="text"
+                  placeholder="搜索课程、英文标题或关键词（如：新概念、8000句、美剧、商务、雅思、出行...）"
+                  class="catalog-search-input"
+                />
+                <button v-if="courseSearchQuery" class="search-clear-btn" @click="courseSearchQuery = ''" title="清空搜索">
+                  <i class="ph-bold ph-x"></i>
+                </button>
+              </div>
 
-          <!-- 搜索与数据概览栏 -->
-          <div class="catalog-search-bar">
-            <div class="catalog-search-wrap">
-              <i class="ph-bold ph-magnifying-glass search-icon"></i>
-              <input
-                v-model="courseSearchQuery"
-                type="text"
-                placeholder="搜索课程（如：新概念、8000句、美剧、商务、雅思、四六级、出行、生活...）"
-                class="catalog-search-input"
-              />
-              <button v-if="courseSearchQuery" class="search-clear-btn" @click="courseSearchQuery = ''" title="清空搜索">
-                <i class="ph-bold ph-x"></i>
-              </button>
+              <div class="catalog-panel-actions">
+                <div class="catalog-stats-badge">
+                  <i class="ph-fill ph-books"></i>
+                  <span>共 <strong>{{ courseList.length }}</strong> 门课程 · <strong>10,328</strong> 句真人原声</span>
+                </div>
+                <button class="catalog-custom-btn" @click="openCustomModal" title="AI 自建专属新课程">
+                  <i class="ph-bold ph-plus-circle"></i>
+                  <span>定制新课程</span>
+                </button>
+              </div>
             </div>
-            <div class="catalog-stats-badge">
-              <i class="ph-fill ph-books"></i>
-              <span>收录 <strong>{{ courseList.length }}</strong> 门课程 · <strong>10,328</strong> 句真人发音题库</span>
+
+            <!-- 分类筛选行：全量 13 大分类自适应流式平铺 (100% 完整展示，绝不截断或遮挡) -->
+            <div class="catalog-category-wrap">
+              <div class="catalog-category-pills">
+                <button
+                  v-for="cat in COURSE_CATEGORIES"
+                  :key="cat.id"
+                  class="catalog-cat-pill"
+                  :class="{ active: courseSelectedCategory === cat.id }"
+                  @click="courseSelectedCategory = cat.id">
+                  <i v-if="cat.icon" :class="'ph-bold ph-' + cat.icon" class="cat-pill-icon"></i>
+                  <span>{{ cat.label }}</span>
+                  <span class="cat-pill-count">{{ getCourseCategoryCount(cat.id) }}</span>
+                </button>
+              </div>
             </div>
           </div>
 
