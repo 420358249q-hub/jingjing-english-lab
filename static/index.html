@@ -127,7 +127,8 @@
               class="course-card"
               @click="openCourse(c.id)">
               <div class="course-cover" :style="{
-                backgroundImage: `linear-gradient(180deg, rgba(15, 23, 42, 0.25) 0%, rgba(15, 23, 42, 0.88) 100%), url(${c.cover_image || ('/static/images/courses/' + c.id + '.jpg')})`
+                backgroundColor: '#1e293b',
+                backgroundImage: `linear-gradient(180deg, rgba(15, 23, 42, 0.25) 0%, rgba(15, 23, 42, 0.88) 100%), url(${c.cover_image || ('/static/images/courses/' + c.id + '.jpg')}), ${c.cover_gradient || 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'}`
               }">
                 <div class="course-cover-top">
                   <div class="course-cover-badge">{{ c.tag }}</div>
@@ -192,7 +193,8 @@
 
           <!-- 课程沉浸式视觉海报 Banner -->
           <div class="chapters-hero-banner" :style="{
-            backgroundImage: `linear-gradient(90deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.72) 55%, rgba(15, 23, 42, 0.88) 100%), url(${currentCourse.cover_image || ('/static/images/courses/' + currentCourse.id + '.jpg')})`
+            backgroundColor: '#1e293b',
+            backgroundImage: `linear-gradient(90deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.72) 55%, rgba(15, 23, 42, 0.88) 100%), url(${currentCourse.cover_image || ('/static/images/courses/' + currentCourse.id + '.jpg')}), ${currentCourse.cover_gradient || 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'}`
           }">
             <div class="chapters-hero-content">
               <div class="chapters-hero-tag">
@@ -293,7 +295,8 @@
 
             <!-- 2. 场景插图展示卡 (Thematic Cinematic Illustration) -->
             <div class="drill-scene-illustration" :style="{
-              backgroundImage: `linear-gradient(180deg, rgba(15, 23, 42, 0.42) 0%, rgba(15, 23, 42, 0.92) 100%), url(${currentDrillScene.image})`
+              backgroundColor: '#151722',
+              backgroundImage: `linear-gradient(180deg, rgba(15, 23, 42, 0.42) 0%, rgba(15, 23, 42, 0.92) 100%), url(${currentDrillScene.image}), linear-gradient(135deg, #1e293b 0%, #0f172a 100%)`
             }">
               <div class="drill-scene-top-badge">
                 <i :class="'ph-fill ph-' + currentDrillScene.icon"></i>
