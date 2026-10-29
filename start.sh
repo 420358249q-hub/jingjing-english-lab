@@ -78,9 +78,17 @@ else
     echo "💡 系统内置了智能离线模拟模式，即使没开 Ollama 也能正常体验造句、发音、生词本与跟读！"
 fi
 
-# 5. 后台启动 FastAPI 服务
+# 5. 清理陈旧进程，确保端口可用
 HOST="${JJ_HOST:-127.0.0.1}"
 PORT="${JJ_PORT:-8000}"
+OLD_PID=$(lsof -ti :$PORT 2>/dev/null || true)
+if [ -n "$OLD_PID" ]; then
+    echo "🧹 释放被占用的端口 $PORT (清理进程: $OLD_PID)..."
+    kill -9 $OLD_PID 2>/dev/null || true
+    sleep 0.5
+fi
+
+# 6. 后台启动 FastAPI 服务
 echo "🌐 启动 Web 服务器 (http://${HOST}:${PORT})..."
 
 # 自动在浏览器中打开页面
