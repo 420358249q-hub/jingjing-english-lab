@@ -35455,7 +35455,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/oral_900.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "spoken_1000",
@@ -75547,7 +75549,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/spoken_1000.jpg",
+    "cdn_cover_image": ""
   },
   {
     "id": "nce_book1",
@@ -93750,7 +93754,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/nce_book1.jpg",
+    "cdn_cover_image": ""
   },
   {
     "id": "nce_book2",
@@ -112316,7 +112322,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/nce_book2.jpg",
+    "cdn_cover_image": ""
   },
   {
     "id": "nce_book3",
@@ -127623,7 +127631,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/nce_book3.jpg",
+    "cdn_cover_image": ""
   },
   {
     "id": "nce_book4",
@@ -138473,7 +138483,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/nce_book4.jpg",
+    "cdn_cover_image": ""
   },
   {
     "id": "pattern_720_up",
@@ -155956,7 +155968,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/pattern_720_up.jpg",
+    "cdn_cover_image": ""
   },
   {
     "id": "pattern_720_down",
@@ -172902,7 +172916,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/pattern_720_down.jpg",
+    "cdn_cover_image": ""
   },
   {
     "id": "pattern_600_up",
@@ -186505,7 +186521,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/pattern_600_up.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1456324504439-367cee3b3c32?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "pattern_600_down",
@@ -199919,7 +199937,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/pattern_600_down.jpg",
+    "cdn_cover_image": ""
   },
   {
     "id": "pattern_450_up",
@@ -210565,7 +210585,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/pattern_450_up.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "pattern_450_down",
@@ -220895,7 +220917,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/pattern_450_down.jpg",
+    "cdn_cover_image": ""
   },
   {
     "id": "pattern_300_up",
@@ -227853,7 +227877,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/pattern_300_up.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "pattern_300_down",
@@ -234785,7 +234811,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/pattern_300_down.jpg",
+    "cdn_cover_image": ""
   },
   {
     "id": "oral8000_home",
@@ -246387,7 +246415,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/oral8000_home.jpg",
+    "cdn_cover_image": ""
   },
   {
     "id": "oral8000_social",
@@ -257819,7 +257849,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/oral8000_social.jpg",
+    "cdn_cover_image": ""
   },
   {
     "id": "oral8000_dining",
@@ -266670,7 +266702,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/oral8000_dining.jpg",
+    "cdn_cover_image": ""
   },
   {
     "id": "oral8000_traffic",
@@ -274268,7 +274302,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/oral8000_traffic.jpg",
+    "cdn_cover_image": ""
   },
   {
     "id": "oral8000_shopping",
@@ -279829,7 +279865,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/oral8000_shopping.jpg",
+    "cdn_cover_image": ""
   },
   {
     "id": "oral8000_emotions",
@@ -291382,7 +291420,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/oral8000_emotions.jpg",
+    "cdn_cover_image": ""
   },
   {
     "id": "oral8000_medical",
@@ -296548,7 +296588,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/oral8000_medical.jpg",
+    "cdn_cover_image": ""
   },
   {
     "id": "oral8000_romance",
@@ -304065,7 +304107,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/oral8000_romance.jpg",
+    "cdn_cover_image": ""
   },
   {
     "id": "biz_workplace",
@@ -312243,7 +312287,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/biz_workplace.jpg",
+    "cdn_cover_image": ""
   },
   {
     "id": "biz_letters",
@@ -318701,7 +318747,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/biz_letters.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "biz_telecom",
@@ -325517,7 +325565,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/biz_telecom.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1588196749597-9ff075ee6b5b?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "biz_negotiation",
@@ -331854,7 +331904,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/biz_negotiation.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "ielts_master",
@@ -341147,7 +341199,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/ielts_master.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "cet46_patterns",
@@ -350594,7 +350648,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/cet46_patterns.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "toefl_speaking",
@@ -358307,7 +358363,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/toefl_speaking.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1534430480872-3498386e7856?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "kaoyan_syntax",
@@ -366081,7 +366139,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/kaoyan_syntax.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "movie_classics",
@@ -369986,7 +370046,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/movie_classics.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "tv_slang_hot",
@@ -377326,7 +377388,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/tv_slang_hot.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1593784991095-a205069470b6?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "pop_music_lyrics",
@@ -382793,7 +382857,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/pop_music_lyrics.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "china_heritage",
@@ -390688,7 +390754,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/china_heritage.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "china_gourmet",
@@ -398252,7 +398320,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/china_gourmet.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "china_landmarks",
@@ -406045,7 +406115,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/china_landmarks.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1547981609-4b6bfe67ca0b?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "it_tech_pro",
@@ -413753,7 +413825,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/it_tech_pro.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "aviation_hospitality",
@@ -421243,7 +421317,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/aviation_hospitality.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "finance_investing",
@@ -428841,7 +428917,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/finance_investing.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "ted_talks_master",
@@ -430382,7 +430460,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/ted_talks_master.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "classic_prose",
@@ -432625,7 +432705,9 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/classic_prose.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600&auto=format&fit=crop&q=80"
   },
   {
     "id": "idioms_wisdom",
@@ -437602,6 +437684,8 @@
           }
         ]
       }
-    ]
+    ],
+    "cover_image": "/static/images/courses/idioms_wisdom.jpg",
+    "cdn_cover_image": "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=600&auto=format&fit=crop&q=80"
   }
 ]

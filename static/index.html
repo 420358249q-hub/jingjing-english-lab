@@ -88,6 +88,7 @@
                 class="catalog-cat-pill"
                 :class="{ active: courseSelectedCategory === cat.id }"
                 @click="courseSelectedCategory = cat.id">
+                <i v-if="cat.icon" :class="'ph-bold ph-' + cat.icon" class="cat-pill-icon"></i>
                 <span>{{ cat.label }}</span>
                 <span class="cat-pill-count">{{ getCourseCategoryCount(cat.id) }}</span>
               </button>
@@ -125,10 +126,16 @@
               :key="c.id"
               class="course-card"
               @click="openCourse(c.id)">
-              <div class="course-cover" :style="{ background: c.cover_gradient }">
-                <i :class="'ph-fill ph-' + c.icon" class="course-cover-illustration"></i>
+              <div class="course-cover" :style="{
+                backgroundImage: `linear-gradient(180deg, rgba(15, 23, 42, 0.25) 0%, rgba(15, 23, 42, 0.88) 100%), url(${c.cover_image || ('/static/images/courses/' + c.id + '.jpg')})`
+              }">
+                <div class="course-cover-top">
+                  <div class="course-cover-badge">{{ c.tag }}</div>
+                  <div class="course-cover-icon-pill">
+                    <i :class="'ph-fill ph-' + c.icon"></i>
+                  </div>
+                </div>
                 <div class="course-cover-title">{{ c.title }}</div>
-                <div class="course-cover-badge">{{ c.tag }}</div>
               </div>
               <div class="course-card-body">
                 <div class="course-card-title">{{ c.title }}</div>
@@ -180,6 +187,21 @@
               <button class="reset-course-btn" @click="resetCurrentCourseProgress" title="清空本课学习记录">
                 <i class="ph-bold ph-trash"></i><span>重置进度</span>
               </button>
+            </div>
+          </div>
+
+          <!-- 课程沉浸式视觉海报 Banner -->
+          <div class="chapters-hero-banner" :style="{
+            backgroundImage: `linear-gradient(90deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.72) 55%, rgba(15, 23, 42, 0.88) 100%), url(${currentCourse.cover_image || ('/static/images/courses/' + currentCourse.id + '.jpg')})`
+          }">
+            <div class="chapters-hero-content">
+              <div class="chapters-hero-tag">
+                <i :class="'ph-fill ph-' + currentCourse.icon"></i>
+                <span>{{ currentCourse.tag }} · {{ currentCourse.category_name }}</span>
+              </div>
+              <h2 class="chapters-hero-title">{{ currentCourse.title }}</h2>
+              <p class="chapters-hero-eng">{{ currentCourse.english_title }}</p>
+              <p class="chapters-hero-desc">{{ currentCourse.description }}</p>
             </div>
           </div>
 
@@ -269,12 +291,25 @@
               </div>
             </div>
 
-            <!-- 2. 场景插图展示卡 (Thematic Illustration) -->
-            <div class="drill-scene-illustration">
-              <i class="ph-fill ph-hand-heart drill-scene-svg text-9xl"></i>
-              <div class="drill-scene-caption">
-                <i class="ph-bold ph-sparkle"></i>
-                <span>“{{ courseDrill.chinese }}”</span>
+            <!-- 2. 场景插图展示卡 (Thematic Cinematic Illustration) -->
+            <div class="drill-scene-illustration" :style="{
+              backgroundImage: `linear-gradient(180deg, rgba(15, 23, 42, 0.42) 0%, rgba(15, 23, 42, 0.92) 100%), url(${currentDrillScene.image})`
+            }">
+              <div class="drill-scene-top-badge">
+                <i :class="'ph-fill ph-' + currentDrillScene.icon"></i>
+                <span>{{ currentDrillScene.tag }}</span>
+              </div>
+              <div class="drill-scene-content">
+                <div class="drill-scene-quote-icon">“</div>
+                <div class="drill-scene-caption">
+                  <span>{{ courseDrill.chinese }}</span>
+                </div>
+              </div>
+              <div class="drill-scene-footer-meta">
+                <span class="drill-mood-pill">
+                  <i class="ph-fill ph-sparkle"></i>
+                  <span>母语原声朗读 · 盲打研习</span>
+                </span>
               </div>
             </div>
 

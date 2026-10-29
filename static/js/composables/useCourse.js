@@ -7,19 +7,19 @@ const Vue = window.Vue;
 const COURSE_STORAGE_KEY = 'jjs_course_progress_v2';
 
 export const COURSE_CATEGORIES = [
-  { id: '全部', label: '全部' },
-  { id: '零基础', label: '零基础' },
-  { id: '日常实用', label: '日常实用' },
-  { id: '综合提升', label: '综合提升' },
-  { id: '商务英语', label: '商务英语' },
-  { id: '认证备考', label: '认证备考' },
-  { id: '娱乐影音', label: '娱乐影音' },
-  { id: '分级阅读', label: '分级阅读' },
-  { id: '中国文化', label: '中国文化' },
-  { id: '行业英语', label: '行业英语' },
-  { id: '文学读物', label: '文学读物' },
-  { id: '英文演讲', label: '英文演讲' },
-  { id: '其他', label: '其他' }
+  { id: '全部', label: '全部', icon: 'squares-four' },
+  { id: '零基础', label: '零基础', icon: 'sparkle' },
+  { id: '日常实用', label: '日常实用', icon: 'chat-circle-dots' },
+  { id: '综合提升', label: '综合提升', icon: 'trend-up' },
+  { id: '商务英语', label: '商务英语', icon: 'briefcase' },
+  { id: '认证备考', label: '认证备考', icon: 'certificate' },
+  { id: '娱乐影音', label: '娱乐影音', icon: 'film-slate' },
+  { id: '分级阅读', label: '分级阅读', icon: 'book-open-text' },
+  { id: '中国文化', label: '中国文化', icon: 'globe-hemisphere-east' },
+  { id: '行业英语', label: '行业英语', icon: 'cpu' },
+  { id: '文学读物', label: '文学读物', icon: 'books' },
+  { id: '英文演讲', label: '英文演讲', icon: 'microphone-stage' },
+  { id: '其他', label: '其他', icon: 'lightbulb' }
 ];
 
 function loadStoredProgress() {
@@ -305,6 +305,110 @@ export function useCourse({ audio, onScoreAdd } = {}) {
       .split(/\s+/)
       .map(w => w.replace(/[.,?!;:'"()]/g, '').trim())
       .filter(w => w.length > 0);
+  });
+
+  // Thematic scene illustration mapping for Tier 3 Drill Workshop
+  const currentDrillScene = computed(() => {
+    const course = currentCourse.value;
+    const ch = currentChapter.value;
+    const cid = course ? course.id : '';
+    const chTitle = ch ? (ch.chapter_title || ch.title || '') : '';
+
+    if (cid === 'movie_classics') {
+      if (chTitle.includes('肖申克')) {
+        return { image: '/static/images/scenes/scene_shawshank.jpg', tag: '🎬 影史名篇 · 《肖申克的救赎》', icon: 'film-slate' };
+      }
+      if (chTitle.includes('阿甘')) {
+        return { image: '/static/images/scenes/scene_forrest.jpg', tag: '🎬 经典电影 · 《阿甘正传》', icon: 'film-slate' };
+      }
+      if (chTitle.includes('泰坦尼克')) {
+        return { image: '/static/images/scenes/scene_titanic.jpg', tag: '🎬 影史巨作 · 《泰坦尼克号》', icon: 'heart' };
+      }
+      if (chTitle.includes('教父')) {
+        return { image: '/static/images/scenes/scene_godfather.jpg', tag: '🎬 经典黑帮 · 《教父》', icon: 'crown' };
+      }
+      return { image: '/static/images/scenes/scene_cinema.jpg', tag: '🎬 好莱坞经典原声台词', icon: 'film-slate' };
+    }
+
+    if (cid === 'tv_slang_hot') {
+      if (chTitle.includes('老友记')) {
+        return { image: '/static/images/scenes/scene_friends.jpg', tag: '📺 经典美剧 · 《老友记》', icon: 'coffee' };
+      }
+      return { image: '/static/images/scenes/scene_tv.jpg', tag: '📺 美剧地道口语俚语', icon: 'television' };
+    }
+
+    if (cid === 'ted_talks_master') {
+      return { image: '/static/images/scenes/scene_ted.jpg', tag: '🎙️ TED 传奇公开演讲', icon: 'microphone-stage' };
+    }
+
+    if (cid === 'classic_prose') {
+      if (chTitle.includes('傲慢与偏见')) {
+        return { image: '/static/images/scenes/scene_pride.jpg', tag: '📖 传世名著 · 《傲慢与偏见》', icon: 'book-bookmark' };
+      }
+      if (chTitle.includes('小王子')) {
+        return { image: '/static/images/scenes/scene_prince.jpg', tag: '✨ 纯真哲思 · 《小王子》', icon: 'sparkle' };
+      }
+      return { image: '/static/images/scenes/scene_literature.jpg', tag: '📖 世界经典名著晨读', icon: 'book-open' };
+    }
+
+    if (cid === 'china_heritage' || cid === 'china_landmarks') {
+      return { image: '/static/images/scenes/scene_china.jpg', tag: '🏮 东方风骨 · 中国文化', icon: 'mountains' };
+    }
+
+    if (cid === 'china_gourmet' || cid === 'oral_8000_dining') {
+      return { image: '/static/images/scenes/scene_dining.jpg', tag: '🍲 舌尖寻味 · 餐厅就餐', icon: 'bowl-food' };
+    }
+
+    if (cid === 'oral_8000_travel' || cid === 'aviation_hospitality') {
+      return { image: '/static/images/scenes/scene_travel.jpg', tag: '✈️ 环球漫旅 · 机场出行', icon: 'airplane-tilt' };
+    }
+
+    if (cid === 'it_tech_pro') {
+      return { image: '/static/images/scenes/scene_tech.jpg', tag: '💻 极客职场 · IT研发英语', icon: 'cpu' };
+    }
+
+    if (cid.startsWith('biz_')) {
+      return { image: '/static/images/scenes/scene_business.jpg', tag: '💼 跨国商务 · 职场实战', icon: 'briefcase' };
+    }
+
+    if (cid === 'finance_investing') {
+      return { image: '/static/images/scenes/scene_finance.jpg', tag: '📈 华尔街金融 · 资本市场', icon: 'chart-line-up' };
+    }
+
+    if (cid.includes('ielts') || cid.includes('toefl') || cid.includes('cet') || cid.includes('kaoyan')) {
+      return { image: '/static/images/scenes/scene_exam.jpg', tag: '🎓 官方认证题库冲刺', icon: 'certificate' };
+    }
+
+    if (cid.startsWith('primary_') || cid.startsWith('pattern_')) {
+      return { image: '/static/images/scenes/scene_kids.jpg', tag: '🎨 启蒙乐园 · 核心句式', icon: 'palette' };
+    }
+
+    if (cid.startsWith('nce_')) {
+      return { image: '/static/images/scenes/scene_library.jpg', tag: '📚 新概念正统英式英语', icon: 'books' };
+    }
+
+    if (cid === 'oral_8000_health') {
+      return { image: '/static/images/scenes/scene_health.jpg', tag: '🌿 养生健康 · 医疗就诊', icon: 'first-aid' };
+    }
+
+    if (cid === 'oral_8000_romance') {
+      return { image: '/static/images/scenes/scene_romance.jpg', tag: '🌹 浪漫约会 · 甜蜜表白', icon: 'heart' };
+    }
+
+    if (cid === 'oral_8000_shopping') {
+      return { image: '/static/images/scenes/scene_shopping.jpg', tag: '🛍️ 时尚街区 · 购物血拼', icon: 'shopping-bag' };
+    }
+
+    if (cid === 'pop_music_lyrics') {
+      return { image: '/static/images/scenes/scene_music.jpg', tag: '🎵 欧美流行金曲 · 诗意歌词', icon: 'music-notes' };
+    }
+
+    return {
+      image: `/static/images/courses/${cid}.jpg`,
+      fallback: '/static/images/scenes/scene_daily.jpg',
+      tag: `✨ ${course?.title || '地道口语实战'}`,
+      icon: course?.icon || 'sparkle'
+    };
   });
 
   // Init slot state for new drill
@@ -594,6 +698,7 @@ export function useCourse({ audio, onScoreAdd } = {}) {
     currentDrillIndex: courseDrillIndex,
     courseDrill,
     currentDrill: courseDrill,
+    currentDrillScene,
     drillWords,
     userTypedWords,
     activeWordSlot,

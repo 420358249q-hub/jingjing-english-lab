@@ -48,6 +48,8 @@ def get_courses_summary() -> List[Dict[str, Any]]:
             "chapter_count": len(c.get("chapters", [])),
             "sentence_count": c.get("sentence_count", 0),
             "cover_gradient": c.get("cover_gradient", "linear-gradient(135deg, #10b981 0%, #06b6d4 100%)"),
+            "cover_image": c.get("cover_image", f"/static/images/courses/{c['id']}.jpg"),
+            "cdn_cover_image": c.get("cdn_cover_image", ""),
             "icon": c.get("icon", "chat-circle-text"),
             "description": c.get("description", "")
         })
@@ -80,6 +82,8 @@ def get_course_detail(course_id: str) -> Optional[Dict[str, Any]]:
                 "chapter_count": len(c.get("chapters", [])),
                 "sentence_count": c.get("sentence_count", 0),
                 "cover_gradient": c.get("cover_gradient", ""),
+                "cover_image": c.get("cover_image", f"/static/images/courses/{c['id']}.jpg"),
+                "cdn_cover_image": c.get("cdn_cover_image", ""),
                 "icon": c.get("icon", "chat-circle-text"),
                 "description": c.get("description", ""),
                 "chapters": chapters_summary
