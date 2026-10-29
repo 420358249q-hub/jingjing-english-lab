@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>静静学习系统 · Pro 私教</title>
+
+  <!-- 纯静态免构建：全部依赖本地 vendor，无 CDN、无 npm build，秒开 -->
+  <script src="/vendor/tailwind.js"></script>
+  <script src="/vendor/vue.global.prod.js"></script>
+  <link rel="stylesheet" href="/vendor/phosphor/bold.css">
+  <link rel="stylesheet" href="/vendor/phosphor/fill.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="app" v-cloak class="app-shell">
+
+    <!-- ==================== 顶部导航 ==================== -->
+    <header class="app-header">
+      <div class="header-inner">
+
+        <!-- 品牌 -->
+        <div class="brand" @click="activeTab = 'drill'">
+          <div class="brand-mark">
+            <i class="ph-fill ph-graduation-cap"></i>
+          </div>
+          <div class="brand-text">
+            <div class="brand-title-row">
+              <span class="brand-title">静静学习系统</span>
+              <span class="pro-badge">Pro 私教</span>
+            </div>
+            <p class="brand-subtitle">桌面端英语自习 · 私教对练工作站</p>
+          </div>
+        </div>
+
+        <!-- 导航 -->
+        <nav class="nav-tabs">
+          <button class="nav-tab" :class="{ active: activeTab === 'drill' }" @click="activeTab = 'drill'">
+            <i class="ph-bold ph-squares-four"></i><span>研习</span>
+          </button>
+          <button class="nav-tab" :class="{ active: activeTab === 'talk' }" @click="activeTab = 'talk'">
+            <i class="ph-bold ph-microphone"></i><span>口语对练</span>
+          </button>
+          <button class="nav-tab" :class="{ active: activeTab === 'report' }" @click="activeTab = 'report'">
+            <i class="ph-bold ph-chart-line-up"></i><span>诊断报告</span>
+          </button>
+          <button class="nav-tab" :class="{ active: activeTab === 'notebook' }" @click="activeTab = 'notebook'">
+            <i class="ph-bold ph-bookmark-simple"></i><span>生词本</span>
+          </button>
+          <button class="nav-tab" :class="{ active: activeTab === 'settings' }" @click="activeTab = 'settings'">
+            <i class="ph-bold ph-gear"></i><span>设置</span>
+          </button>
+        </nav>
+
+        <!-- 右侧状态 -->
+        <div class="header-status">
+          <div class="status-pill">
+            <span class="dot" :class="systemStatus.ollama_connected ? 'ok' : 'warn'"></span>
+            <span class="mono">{{ systemStatus.active_model || 'Local' }}</span>
+          </div>
+          <div class="stat-pill">
+            <i class="ph-fill ph-fire"></i><span>连胜 {{ streak }}</span>
+          </div>
+          <div class="stat-pill">
+            <i class="ph-fill ph-star"></i><span>积分 {{ score }}</span>
+          </div>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- ==================== 主内容 ==================== -->
+    <main class="page">
+
+      <!-- ========== 1. 造句研习区（双栏工作站） ========== -->
+      <div v-if="activeTab === 'drill'" class="drill-layout">
+
+        <!-- 左侧核心研习区 -->
+        <section class="drill-main">
+          <!-- 分类筛选 + AI 制卡 -->
+          <div class="category-bar">
+            <div class="category-pills">
+              <button
+                v-for="cat in DRILL_CATEGORIES"
+                :key="cat.id"
+                class="cat-pill"
+                :class="{ active: selectedCategory === cat.id }"
+                @click="selectedCategory = cat.id; initDrill(0)">
+                <i :class="'ph-bold ph-' + cat.icon"></i>
+                <span>{{ cat.label }}</span>
+                <span class="count">{{ getCategoryCount(cat.id) }}</span>
+              </button>
+            </div>
+            <button class="ai-card-btn" @click="openCustomModal">
+              <i class="ph-bold ph-magic-wand"></i><span>AI 制卡</span>
+            </button>
+          </div>
+
+          <!-- 关卡卡片 -->
+          <div v-if="currentDrill" class="glass-panel drill-card" :class="{ 'shake-it': isShaking, 'is-correct': drillFeedback === 'correct' }">
+            <!-- 元信息 + 语速 + 播放 -->
+            <div class="drill-meta">
+              <div class="drill-meta-left">
+                <span class="meta-badge">{{ currentDrill.category_name }}</span>
+                <span v-if="currentDrill.level_tag" class="level-badge">{{ currentDrill.level_tag }}</span>
+                <span class="progress">第 {{ currentDrillIndex + 1 }} 关 / 共 {{ filteredDrills.length }} 关</span>
+              </div>
+
+              <div class="drill-meta-right">
+                <div class="speed-selector">
+                  <button class="speed-btn" :class="{ active: speechRate === 0.6 }" @click="setSpeechRate(0.6)" title="超慢速精读">
+                    <span>0.6x 超慢</span><kbd>1</kbd>
+                  </button>
+                  <button class="speed-btn" :class="{ active: speechRate === 0.75 }" @click="setSpeechRate(0.75)" title="慢速跟读">
+                    <span>0.75x 慢速</span><kbd>2</kbd>
+                  </button>
+                  <button class="speed-btn" :class="{ active: speechRate === 1.0 }" @click="setSpeechRate(1.0)" title="标准母语速度">
+                    <span>1.0x 标准</span><kbd>3</kbd>
+                  </button>
+                  <button class="speed-btn" :class="{ active: speechRate === 1.25 }" @click="setSpeechRate(1.25)" title="快速挑战">
+                    <span>1.25x 快速</span><kbd>4</kbd>
+                  </button>
+                </div>
+
+                <button
+                  class="play-btn"
+                  :class="{ playing: currentlyPlayingText === ('target_' + currentDrill.id) }"
+                  @click="playTTS(currentDrill.english, 'target_' + currentDrill.id)">
+                  <i :class="'ph-bold ' + (currentlyPlayingText === ('target_' + currentDrill.id) ? 'ph-waveform' : 'ph-speaker-high')"></i>
+                  <span>{{ currentlyPlayingText === ('target_' + currentDrill.id) ? '连读中…' : '整句连读' }}</span>
+                  <kbd>Space</kbd>
+                </button>
+                <button
+                  class="play-btn ghost"
+                  :class="{ playing: currentlyPlayingText === ('split_' + currentDrill.id) }"
+                  @click="playSplitTTS(currentDrill.english, 'split_' + currentDrill.id)">
+                  <i :class="'ph-bold ' + (currentlyPlayingText === ('split_' + currentDrill.id) ? 'ph-waveform' : 'ph-arrows-split')"></i>
+                  <span>{{ currentlyPlayingText === ('split_' + currentDrill.id) ? '精读中…' : '逐词精读' }}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 中文大题面 -->
+            <div class="chinese-prompt">
+              <h2>“{{ currentDrill.chinese }}”</h2>
+              <p>点击下方备选语法词块，按地道语序组装英文原句</p>
+            </div>
+
+            <!-- 原声逐词卡拉OK看板 -->
+            <div class="karaoke-board">
+              <div class="karaoke-head">
+                <div class="karaoke-title">
+                  <i :class="'ph-bold ' + (isAudioPlaying ? 'ph-waveform' : 'ph-translate')"></i>
+                  <span>原声逐词看板</span>
+                  <span v-if="activeWordIndex >= 0 && currentDrillWords[activeWordIndex]" class="now-reading">
+                    朗读 {{ currentDrillWords[activeWordIndex] }} · 第 {{ activeWordIndex + 1 }} 词
+                  </span>
+                </div>
+                <button class="eye-toggle" @click="showTargetText = !showTargetText">
+                  <i :class="'ph-bold ' + (showTargetText ? 'ph-eye' : 'ph-eye-slash')"></i>
+                  <span>{{ showTargetText ? '遮词练听' : '显示原文' }}</span>
+                </button>
+              </div>
+
+              <div class="karaoke-words">
+                <span
+                  v-for="(word, wIdx) in currentDrillWords"
+                  :key="wIdx"
+                  class="word-interactive-span"
+                  :class="{
+                    'word-highlight-active': activeWordIndex === wIdx,
+                    'word-blurred': !showTargetText && !isAudioPlaying && drillFeedback !== 'correct'
+                  }"
+                  @click="playSingleWord(word, wIdx)">
+                  {{ word }}
+                </span>
+              </div>
+            </div>
+
+            <!-- 词块装配槽 -->
+            <div class="sentence-slot-area" :class="{ 'has-items': userTokens.length }" @click="userTokens.length ? null : shuffleTokens()">
+              <div v-if="!userTokens.length" class="slot-placeholder">点击下方词块放入此处 · 点已选词块撤回</div>
+              <div
+                v-for="(token, idx) in userTokens"
+                :key="token.id"
+                class="token-chip in-slot"
+                @click="removeTokenFromSlot(idx)"
+                title="点击撤回">
+                <span>{{ token.text }}</span>
+                <i class="ph-bold ph-x"></i>
+              </div>
+            </div>
+
+            <!-- 备选语法词块库 -->
+            <div class="token-bank">
+              <div class="token-bank-head">
+                <span>备选语法词块库</span>
+                <button @click="shuffleTokens"><i class="ph-bold ph-shuffle"></i>重新打乱</button>
+              </div>
+              <div class="token-bank-grid">
+                <div
+                  v-for="token in availableTokens"
+                  :key="token.id"
+                  class="token-chip"
+                  :class="{ disabled: token.used }">
+                  <span @click="addTokenToSlot(token)">{{ token.text }}</span>
+                  <button v-if="!token.used" class="token-speak" @click.stop="playTokenAudio(token.text)" title="单听词块发音">
+                    <i class="ph-bold ph-speaker-high"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 操作区 -->
+            <div class="drill-actions">
+              <div class="actions-left">
+                <button class="action-btn" :disabled="currentDrillIndex === 0" @click="prevDrill">
+                  <i class="ph-bold ph-caret-left"></i>上一关<kbd>←</kbd>
+                </button>
+                <button class="action-btn" @click="randomDrill"><i class="ph-bold ph-shuffle"></i>随机</button>
+                <button class="action-btn" @click="giveHint"><i class="ph-bold ph-lightbulb"></i>提示</button>
+                <button class="action-btn" @click="shuffleTokens"><i class="ph-bold ph-arrows-counter-clockwise"></i>重置</button>
+                <button class="action-btn" @click="addToNotebook(currentDrill.english, currentDrill.chinese)">
+                  <i class="ph-bold ph-bookmark-simple"></i>收藏
+                </button>
+                <button v-if="currentDrill.is_custom" class="action-btn danger" @click="deleteCustomDrill(currentDrill.id)">
+                  <i class="ph-bold ph-trash"></i>删除
+                </button>
+              </div>
+              <button class="btn-primary check-btn" :disabled="!userTokens.length" @click="checkAnswer">
+                <i class="ph-bold ph-check-circle"></i>检查答案<kbd>Enter</kbd>
+              </button>
+            </div>
+
+            <!-- 答对通关 -->
+            <div v-if="drillFeedback === 'correct'" class="success-banner">
+              <div class="success-left">
+                <i class="ph-fill ph-check-circle"></i>
+                <div>
+                  <div class="success-title">回答正确 · 精准掌握</div>
+                  <div class="success-sub">+15 积分 · 连胜 +1</div>
+                </div>
+              </div>
+              <button class="next-btn" @click="nextDrill">进入下一关<i class="ph-bold ph-arrow-right"></i></button>
+            </div>
+
+            <!-- 答错反馈 -->
+            <div v-if="drillFeedback === 'wrong'" class="error-banner">
+              <i class="ph-fill ph-warning-circle"></i>
+              <span>语序有偏差，再试一次，或先听一遍原句发音。</span>
+              <button @click="shuffleTokens">重试</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 右侧常驻辅助栏 -->
+        <aside class="drill-sidebar">
+          <div class="side-card">
+            <div class="side-card-title"><i class="ph-bold ph-tree-structure"></i>语法内核解构</div>
+            <p class="side-card-body mono">{{ currentDrill ? currentDrill.breakdown : '—' }}</p>
+          </div>
+
+          <div class="side-card">
+            <div class="side-card-title"><i class="ph-bold ph-lightbulb"></i>地道文化贴士</div>
+            <p class="side-card-body">{{ currentDrill ? currentDrill.cultural_tip : '—' }}</p>
+          </div>
+
+          <div class="side-card">
+            <div class="side-card-title"><i class="ph-bold ph-trend-up"></i>今日研习</div>
+            <div class="streak-grid">
+              <div class="streak-cell">
+                <i class="ph-fill ph-fire"></i>
+                <div><b>{{ streak }}</b><span>连胜</span></div>
+              </div>
+              <div class="streak-cell">
+                <i class="ph-fill ph-star"></i>
+                <div><b>{{ score }}</b><span>积分</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="side-card">
+            <div class="side-card-title"><i class="ph-bold ph-bookmark-simple"></i>生词速览</div>
+            <div v-if="notebookItems.length" class="notebook-quick">
+              <div v-for="item in notebookItems.slice(0, 5)" :key="item.id" class="notebook-quick-item" @click="playTTS(item.english, 'nb_' + item.id)">
+                <div class="en">{{ item.english }}</div>
+                <div class="zh">{{ item.chinese }}</div>
+                <button @click.stop="removeFromNotebook(item.id)" title="移除"><i class="ph-bold ph-x"></i></button>
+              </div>
+            </div>
+            <p v-else class="side-card-empty">暂无收藏 · 点击“收藏”即可存入手账</p>
+          </div>
+        </aside>
+      </div>
+
+      <!-- ========== 2. 口语对练区（场景卡片流 + 宽屏对话） ========== -->
+      <div v-if="activeTab === 'talk'" class="talk-layout">
+
+        <!-- 左侧场景卡片流 -->
+        <aside class="scenario-list">
+          <div class="side-card-title scene-head"><i class="ph-bold ph-circles-three-plus"></i>实战场景</div>
+          <div
+            v-for="scen in scenarios"
+            :key="scen.id"
+            class="scenario-card"
+            :class="{ active: activeScenarioId === scen.id }"
+            @click="selectScenario(scen.id)">
+            <div class="scene-icon"><i :class="'ph-fill ph-' + scen.icon"></i></div>
+            <div class="scene-body">
+              <div class="scene-title">{{ scen.title }}</div>
+              <div class="scene-subtitle">{{ scen.subtitle }}</div>
+              <span class="scene-badge">{{ scen.badge }}</span>
+            </div>
+          </div>
+        </aside>
+
+        <!-- 右侧宽屏对话互动区 -->
+        <section class="chat-panel">
+          <header class="chat-header">
+            <div class="chat-header-left">
+              <i class="ph-fill ph-sparkle"></i>
+              <div>
+                <div class="chat-title">私教对练 · {{ currentScenario ? currentScenario.title : '' }}</div>
+                <div class="chat-subtitle">{{ currentScenario ? currentScenario.partner_name : '' }}</div>
+              </div>
+            </div>
+            <div class="chat-header-right">
+              <div class="model-switch">
+                <button :class="{ active: selectedModel.includes('1.5b') }" @click="selectedModel = 'qwen2.5:1.5b'">极速 1.5B</button>
+                <button :class="{ active: !selectedModel.includes('1.5b') }" @click="selectedModel = 'qwen2.5:7b'">深度 7B</button>
+              </div>
+              <button class="action-btn" @click="selectScenario(activeScenarioId, true)" title="清空并重置本局">
+                <i class="ph-bold ph-arrows-counter-clockwise"></i>重开本局
+              </button>
+            </div>
+          </header>
+
+          <!-- 对话流 -->
+          <div ref="chatContainer" class="chat-stream">
+            <div
+              v-for="(msg, index) in chatMessages"
+              :key="index"
+              class="msg-row"
+              :class="{ user: msg.role === 'user' }">
+              <div class="msg-avatar">{{ msg.avatar }}</div>
+              <div class="msg-body">
+                <div class="msg-meta">
+                  <span>{{ msg.name }}</span>
+                  <span>{{ msg.timestamp }}</span>
+                </div>
+                <div class="msg-bubble" :class="msg.role">
+                  <p v-if="msg.role === 'assistant' && currentlyPlayingText === ('msg_' + index)">
+                    <span
+                      v-for="(w, wIdx) in getCleanWords(msg.content)"
+                      :key="wIdx"
+                      class="word-interactive-span"
+                      :class="{ 'word-highlight-active': activeWordIndex === wIdx && activeAudioContext === ('msg_' + index) }"
+                      @click="playTokenAudio(w)">{{ w }}</span>
+                  </p>
+                  <p v-else>{{ msg.content }}</p>
+
+                  <div v-if="msg.role === 'assistant'" class="msg-actions">
+                    <button @click="playTTS(msg.content, 'msg_' + index)">
+                      <i :class="'ph-bold ' + (currentlyPlayingText === ('msg_' + index) ? 'ph-waveform' : 'ph-speaker-high')"></i>
+                      {{ currentlyPlayingText === ('msg_' + index) ? '播放中' : '朗读' }}
+                    </button>
+                    <button @click="addToNotebook(msg.content, '来自场景：' + (currentScenario ? currentScenario.title : ''))">
+                      <i class="ph-bold ph-bookmark-simple"></i>收藏
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="isSending" class="typing-indicator">
+              <i class="ph-bold ph-circle-notch animate-spin"></i>
+              <span>{{ currentScenario ? currentScenario.partner_name : 'Partner' }} 正在输入…</span>
+            </div>
+          </div>
+
+          <!-- 底部输入与录音 -->
+          <footer class="chat-composer">
+            <!-- 高精度波形录音面板 -->
+            <div class="waveform-panel" :class="{ active: isRecording }">
+              <canvas ref="waveformCanvas" width="960" height="72"></canvas>
+              <div v-if="isRecording" class="wave-overlay">
+                <span class="rec-dot"></span>
+                <span>{{ formattedDuration }}</span>
+                <span class="rec-transcript">{{ liveTranscript || '请开口用英文表达…' }}</span>
+              </div>
+              <div v-else class="wave-overlay idle">待机 · 点击录音开始采集波形</div>
+            </div>
+
+            <div class="composer-controls">
+              <button class="mic-btn" :class="{ recording: isRecording }" @click="toggleRecording">
+                <i :class="'ph-fill ' + (isRecording ? 'ph-stop' : 'ph-microphone')"></i>
+                <span>{{ isRecording ? '完成发送' : '录音' }}</span>
+              </button>
+              <button v-if="isRecording" class="cancel-btn" @click="cancelRecording">取消</button>
+
+              <div class="input-wrap">
+                <input
+                  v-model="textInput"
+                  @keyup.enter="sendMessage()"
+                  type="text"
+                  placeholder="输入英文口语，或点击录音进行对练…">
+                <button class="send-btn" :disabled="!textInput.trim() || isSending" @click="sendMessage()">发送</button>
+              </div>
+
+              <button class="report-btn" @click="generateEvaluation">
+                <i class="ph-bold ph-chart-line-up"></i>生成诊断
+              </button>
+            </div>
+          </footer>
+        </section>
+      </div>
+
+      <!-- ========== 3. 6 维口语诊断报告 ========== -->
+      <div v-if="activeTab === 'report'" class="report-page">
+        <div class="report-head">
+          <div>
+            <h2><i class="ph-bold ph-seal-check"></i>6 维口语能力诊断</h2>
+            <p>基于近期对练，分析语法精准度与母语地道度</p>
+          </div>
+          <button class="btn-primary" :disabled="isEvaluating" @click="generateEvaluation">
+            <i :class="'ph-bold ph-arrows-counter-clockwise' + (isEvaluating ? ' animate-spin' : '')"></i>重新诊断
+          </button>
+        </div>
+
+        <div v-if="isEvaluating" class="glass-panel loading-panel">
+          <i class="ph-bold ph-circle-notch animate-spin"></i>
+          <p>本地大模型正在生成 6 维深度诊断…</p>
+        </div>
+
+        <div v-else-if="currentReport" class="report-grid">
+          <div class="glass-panel report-card wide">
+            <div class="report-card-title"><i class="ph-bold ph-sparkle"></i>综合评价与语感反馈</div>
+            <p>{{ currentReport.overallFeedback }}</p>
+          </div>
+
+          <div class="glass-panel report-card">
+            <div class="report-card-title emerald"><i class="ph-fill ph-thumbs-up"></i>做得好的地方</div>
+            <ul><li v-for="(item, i) in currentReport.strengths" :key="i">{{ item }}</li></ul>
+          </div>
+
+          <div class="glass-panel report-card">
+            <div class="report-card-title rose"><i class="ph-fill ph-warning-circle"></i>语法与互动偏误</div>
+            <div v-for="(issue, i) in currentReport.grammarIssues" :key="i" class="issue-block">
+              <div class="line-through">{{ issue.original }}</div>
+              <div class="correction">{{ issue.correction }}</div>
+              <div class="explain">{{ issue.explanation }}</div>
+            </div>
+          </div>
+
+          <div class="glass-panel report-card">
+            <div class="report-card-title sky"><i class="ph-fill ph-translate"></i>词汇与地道表达</div>
+            <div v-for="(vocab, i) in currentReport.vocabularyIssues" :key="i" class="issue-block">
+              <div class="vocab-row"><span>{{ vocab.word }}</span><i class="ph-bold ph-arrow-right"></i><b>{{ vocab.betterChoice }}</b></div>
+              <div class="explain">{{ vocab.reason }}</div>
+            </div>
+          </div>
+
+          <div class="glass-panel report-card">
+            <div class="report-card-title amber"><i class="ph-fill ph-ear"></i>发音与连读避坑</div>
+            <ul><li v-for="(tip, i) in currentReport.pronunciationIssues" :key="i">{{ tip }}</li></ul>
+          </div>
+
+          <div class="glass-panel report-card">
+            <div class="report-card-title indigo"><i class="ph-fill ph-target"></i>推荐专项微练习</div>
+            <ul><li v-for="(prac, i) in currentReport.recommendedPractice" :key="i">{{ prac }}</li></ul>
+          </div>
+
+          <div class="glass-panel report-card">
+            <div class="report-card-title violet"><i class="ph-fill ph-chat-circle-dots"></i>母语者示例回复</div>
+            <div v-for="(rep, i) in currentReport.exampleReplies" :key="i" class="reply-row">
+              <span>“{{ rep }}”</span>
+              <button @click="playTTS(rep, 'rep_' + i)">
+                <i :class="'ph-bold ' + (currentlyPlayingText === ('rep_' + i) ? 'ph-waveform' : 'ph-speaker-high')"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="glass-panel loading-panel">
+          <i class="ph-bold ph-chats"></i>
+          <p>先前往「口语对练」与 AI 语伴交流几轮，再一键生成诊断报告。</p>
+          <button class="btn-primary" @click="activeTab = 'talk'">去口语对练</button>
+        </div>
+      </div>
+
+      <!-- ========== 4. 核心生词手账 ========== -->
+      <div v-if="activeTab === 'notebook'" class="notebook-page">
+        <div class="report-head">
+          <div>
+            <h2><i class="ph-bold ph-bookmarks"></i>核心生词手账</h2>
+            <p>收录造句研习与口语对练中的地道表达与生词难点</p>
+          </div>
+          <span class="muted-count">已收藏 {{ notebookItems.length }} 条</span>
+        </div>
+
+        <div v-if="notebookItems.length" class="notebook-grid">
+          <div v-for="item in notebookItems" :key="item.id" class="glass-panel notebook-card">
+            <div class="notebook-card-body">
+              <div class="zh">{{ item.chinese }}</div>
+              <div class="en">“{{ item.english }}”</div>
+            </div>
+            <div class="notebook-card-foot">
+              <span>{{ item.date }}</span>
+              <div class="foot-actions">
+                <button @click="playTTS(item.english, 'nb_' + item.id)">
+                  <i :class="'ph-bold ' + (currentlyPlayingText === ('nb_' + item.id) ? 'ph-waveform' : 'ph-speaker-high')"></i>
+                </button>
+                <button class="danger" @click="removeFromNotebook(item.id)"><i class="ph-bold ph-trash"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="glass-panel loading-panel">
+          <i class="ph-bold ph-bookmark-simple"></i>
+          <p>生词手账暂空。在研习或对练中点击“收藏”，即可永久保存到本地。</p>
+        </div>
+      </div>
+
+      <!-- ========== 5. 本地系统与音色配置 ========== -->
+      <div v-if="activeTab === 'settings'" class="settings-page">
+        <div class="report-head">
+          <div>
+            <h2><i class="ph-bold ph-sliders"></i>本地系统与音色配置</h2>
+            <p>针对 Mac mini 优化的大模型与超自然发音引擎</p>
+          </div>
+        </div>
+
+        <div class="glass-panel settings-panel">
+          <!-- 大模型 -->
+          <div class="settings-field">
+            <label>
+              <span>本地大脑大模型 (LLM)</span>
+              <span class="field-state" :class="systemStatus.ollama_connected ? 'ok' : 'warn'">
+                {{ systemStatus.ollama_connected ? 'Ollama 已就绪' : 'Ollama 未检测到' }}
+              </span>
+            </label>
+            <select v-model="selectedModel">
+              <option v-for="m in systemStatus.models" :key="m" :value="m">{{ m }}</option>
+              <option value="qwen2.5:1.5b">qwen2.5:1.5b（极速口语）</option>
+              <option value="qwen2.5:7b">qwen2.5:7b（深度思考）</option>
+              <option value="llama3.1:8b">llama3.1:8b</option>
+            </select>
+            <p class="field-hint">终端运行 <code>ollama run qwen2.5:1.5b</code> 即可自动下载并启用纯正地道英语语伴。</p>
+          </div>
+
+          <!-- 发音引擎（锁定） -->
+          <div class="settings-field">
+            <label>
+              <span>语音发音引擎 (TTS)</span>
+              <span class="field-state ok">本地毫秒级磁盘缓存</span>
+            </label>
+            <div class="engine-lock">
+              <i class="ph-fill ph-heart"></i>
+              <div>
+                <div class="engine-title">Kokoro-82M v1.0 · 已锁定 af_heart 纯正母语女声</div>
+                <div class="engine-sub">100% 本地离线神经网络 · 自然呼吸起伏与母语真实语调</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 语速 -->
+          <div class="settings-field">
+            <label><span>语速档位</span><span class="field-state">{{ speechRate }}x</span></label>
+            <div class="speed-selector">
+              <button class="speed-btn" :class="{ active: speechRate === 0.6 }" @click="setSpeechRate(0.6)"><span>0.6x 超慢</span><kbd>1</kbd></button>
+              <button class="speed-btn" :class="{ active: speechRate === 0.75 }" @click="setSpeechRate(0.75)"><span>0.75x 慢速</span><kbd>2</kbd></button>
+              <button class="speed-btn" :class="{ active: speechRate === 1.0 }" @click="setSpeechRate(1.0)"><span>1.0x 标准</span><kbd>3</kbd></button>
+              <button class="speed-btn" :class="{ active: speechRate === 1.25 }" @click="setSpeechRate(1.25)"><span>1.25x 快速</span><kbd>4</kbd></button>
+            </div>
+          </div>
+
+          <!-- 试听 -->
+          <div class="settings-field">
+            <button class="test-voice-btn" @click="playTTS('Hey there! Welcome to your English study session. How is your speaking practice going today?', 'settings_test')">
+              <i :class="'ph-bold ' + (currentlyPlayingText === 'settings_test' ? 'ph-waveform' : 'ph-speaker-high')"></i>
+              <span>{{ currentlyPlayingText === 'settings_test' ? '正在试听…' : '试听当前音色' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- ==================== AI 制卡弹窗 ==================== -->
+    <div v-if="showCustomModal" class="modal-backdrop" @click.self="closeCustomModal">
+      <div class="modal-panel">
+        <header class="modal-head">
+          <div class="modal-head-title">
+            <div class="brand-mark"><i class="ph-bold ph-magic-wand"></i></div>
+            <div>
+              <h3>AI 课文制卡器</h3>
+              <p>粘贴课文或段落，自动切分语法词块并生成研习关卡</p>
+            </div>
+          </div>
+          <button class="modal-close" @click="closeCustomModal"><i class="ph-bold ph-x"></i></button>
+        </header>
+
+        <div class="modal-body">
+          <div class="modal-row">
+            <div class="modal-tag">
+              <label>关卡标签</label>
+              <input v-model="customTag" placeholder="例如：职场进阶 · 精选长句">
+            </div>
+            <button class="action-btn" @click="fillSampleText"><i class="ph-bold ph-notebook"></i>填入示范课文</button>
+          </div>
+
+          <div class="modal-textarea">
+            <label>输入或粘贴英语文本<span>{{ customText.length }} 字符</span></label>
+            <textarea v-model="customText" rows="6" placeholder="在此粘贴任意英文段落或句子，支持中英混排。例如：&#10;The secret of getting ahead is getting started.&#10;Where there is a will, there is a way. 有志者事竟成。"></textarea>
+          </div>
+
+          <button class="btn-primary full" :disabled="!customText.trim() || isGeneratingCustom" @click="generateCustomDrills">
+            <i :class="'ph-bold ' + (isGeneratingCustom ? 'ph-spinner animate-spin' : 'ph-sparkle')"></i>
+            {{ isGeneratingCustom ? '正在 AI 切词与翻译…' : '开始 AI 智能解析' }}
+          </button>
+
+          <div v-if="generatedPreviewDrills.length" class="preview-list">
+            <div class="preview-head">
+              <span><i class="ph-bold ph-check-circle"></i>已生成 {{ generatedPreviewDrills.length }} 个关卡</span>
+              <span>词块已自动语法拆解</span>
+            </div>
+            <div class="preview-items">
+              <div v-for="(drill, dIdx) in generatedPreviewDrills" :key="dIdx" class="preview-item">
+                <div class="preview-item-head">
+                  <span class="level-badge">{{ drill.level_tag }}</span>
+                  <button @click="removePreviewDrill(dIdx)">删除此句</button>
+                </div>
+                <div class="preview-zh">{{ drill.chinese }}</div>
+                <div class="preview-en">{{ drill.english }}</div>
+                <div class="preview-tokens">
+                  <span v-for="(tok, tIdx) in drill.tokens" :key="tIdx">{{ tok }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="modal-foot">
+          <button class="action-btn" @click="closeCustomModal">取消</button>
+          <button class="btn-primary" :disabled="!generatedPreviewDrills.length" @click="saveAndPlayCustomDrills">
+            <i class="ph-bold ph-floppy-disk"></i>保存并进入研习 ({{ generatedPreviewDrills.length }} 关)
+          </button>
+        </footer>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 入口（原生 ES Module，无构建） -->
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

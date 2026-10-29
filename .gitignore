@@ -1,0 +1,19 @@
+# 运行时生成与虚拟环境（避免跨机冲突）
+venv
+venv/
+data/
+*.db
+__pycache__/
+*.pyc
+.DS_Store
+*.zip
+*.log
+
+# 关键：排除超过 100MB 的二进制神经模型（防止 GitHub 拒推）
+models/*.onnx
+models/*.bin
+models/*.json
+!models/.gitkeep
+
+# 保留纯静态前端依赖，保证克隆后免 npm 构建
+!static/vendor/
