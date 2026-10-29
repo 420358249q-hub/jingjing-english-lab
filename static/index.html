@@ -285,8 +285,17 @@
               <button class="top-action-pill" @click="revealAnswer" title="查看当前句子答案 (快捷键: ↓)">
                 <i class="ph-bold ph-lightbulb"></i><span>答案</span>
               </button>
-              <button class="top-action-pill" @click="playCurrentDrillAudio" title="发音 (快捷键: Tab 或 Ctrl+A)">
-                <i class="ph-bold ph-speaker-high"></i><span>发音</span>
+              <!-- 自动朗读模式切换（默认关闭：不主动念读，点击发音按钮或按 Tab 时才朗读） -->
+              <button
+                class="top-action-pill autoplay-pill"
+                :class="{ active: autoPlayDrillAudio }"
+                @click="toggleAutoPlay"
+                :title="autoPlayDrillAudio ? '已开启切题自动朗读（点击关闭）' : '已关闭自动朗读（点开不自动念，点击发音按钮才朗读）'">
+                <i :class="'ph-bold ' + (autoPlayDrillAudio ? 'ph-speaker-high' : 'ph-speaker-slash')"></i>
+                <span>{{ autoPlayDrillAudio ? '自动朗读:开' : '自动朗读:关' }}</span>
+              </button>
+              <button class="top-action-pill read-pill" @click="playCurrentDrillAudio" title="发音朗读整句 (快捷键: Tab 或 Ctrl+A)">
+                <i class="ph-bold ph-speaker-high"></i><span>点击朗读</span>
               </button>
             </div>
           </div>

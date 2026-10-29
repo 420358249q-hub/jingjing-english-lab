@@ -72,6 +72,18 @@ export function useCourse({ audio, onScoreAdd } = {}) {
   let mediaRecorder = null;
   let audioChunks = [];
 
+  // 自动朗读控制（默认 false 关闭，用户点击“点击朗读”或 Tab 键才念）
+  const AUTOPLAY_KEY = 'jjs_auto_play_drill';
+  const autoPlayDrillAudio = ref(localStorage.getItem(AUTOPLAY_KEY) === 'true');
+
+  const toggleAutoPlay = () => {
+    autoPlayDrillAudio.value = !autoPlayDrillAudio.value;
+    try {
+      localStorage.setItem(AUTOPLAY_KEY, String(autoPlayDrillAudio.value));
+    } catch (e) {}
+    if (audio && audio.playAudioCue) audio.playAudioCue('click');
+  };
+
   // Progress store
   const storedProgress = ref(loadStoredProgress());
 
@@ -320,10 +332,12 @@ export function useCourse({ audio, onScoreAdd } = {}) {
         courseViewMode.value = 'practice';
         startStudyTimer();
         prewarmDrillAudio();
-        // Play current sentence audio on enter
-        setTimeout(() => {
-          playCurrentDrillAudio();
-        }, 300);
+        // 静音预热：默认不强制发音，仅在用户开启自动朗读时念读
+        if (autoPlayDrillAudio.value) {
+          setTimeout(() => {
+            playCurrentDrillAudio();
+          }, 300);
+        }
       }
     } catch (e) {
       console.warn('[useCourse] Failed to load chapter drills:', e);
@@ -664,7 +678,9 @@ export function useCourse({ audio, onScoreAdd } = {}) {
       courseDrillIndex.value += 1;
       initDrillSlotState();
       prewarmDrillAudio();
-      setTimeout(playCurrentDrillAudio, 200);
+      if (autoPlayDrillAudio.value) {
+        setTimeout(playCurrentDrillAudio, 200);
+      }
     } else {
       // Completed chapter!
       if (audio && audio.playAudioCue) audio.playAudioCue('correct');
@@ -677,7 +693,9 @@ export function useCourse({ audio, onScoreAdd } = {}) {
       courseDrillIndex.value -= 1;
       initDrillSlotState();
       prewarmDrillAudio();
-      setTimeout(playCurrentDrillAudio, 200);
+      if (autoPlayDrillAudio.value) {
+        setTimeout(playCurrentDrillAudio, 200);
+      }
     }
   };
 
@@ -819,6 +837,8 @@ export function useCourse({ audio, onScoreAdd } = {}) {
     isDrillCorrect,
     showAnswerHint,
     drillPracticeMode,
+    autoPlayDrillAudio,
+    toggleAutoPlay,
     isRecordingSpeech,
     isEvaluatingSpeech,
     speechScore,

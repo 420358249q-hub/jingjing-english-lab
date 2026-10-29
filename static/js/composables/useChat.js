@@ -87,7 +87,8 @@ export function useChat({ audio, addScore, selectedModel } = {}) {
       }
     ];
     persistChatHistory(id, chatMessages.value);
-    if (audio && audio.playTTS) audio.playTTS(scen.initial_message);
+    // 静音预热：不强制播放初始招呼语音，用户点击气泡喇叭时再播放
+    if (audio && audio.prewarmAudio) audio.prewarmAudio(scen.initial_message);
   };
 
   const sendMessage = async (overrideContent = null) => {
