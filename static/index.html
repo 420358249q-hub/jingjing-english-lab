@@ -89,6 +89,7 @@
                 :class="{ active: selectedCategory === cat.id }"
                 @click="selectedCategory = cat.id">
                 <span>{{ cat.label }}</span>
+                <span class="cat-pill-count">{{ getCategoryCount(cat.id) }}</span>
               </button>
             </div>
             <div class="catalog-request-link" @click="openCustomModal">
@@ -97,7 +98,27 @@
             </div>
           </div>
 
-          <!-- 12 大爆款课程卡片网格 -->
+          <!-- 搜索与数据概览栏 -->
+          <div class="catalog-search-bar">
+            <div class="catalog-search-wrap">
+              <i class="ph-bold ph-magnifying-glass search-icon"></i>
+              <input
+                v-model="courseSearchQuery"
+                type="text"
+                placeholder="搜索课程（如：新概念、8000句、美剧、商务、雅思、四六级、出行、生活...）"
+                class="catalog-search-input"
+              />
+              <button v-if="courseSearchQuery" class="search-clear-btn" @click="courseSearchQuery = ''" title="清空搜索">
+                <i class="ph-bold ph-x"></i>
+              </button>
+            </div>
+            <div class="catalog-stats-badge">
+              <i class="ph-fill ph-books"></i>
+              <span>收录 <strong>{{ courseList.length }}</strong> 门课程 · <strong>10,328</strong> 句真人发音题库</span>
+            </div>
+          </div>
+
+          <!-- 42 门官方精品课程卡片网格 -->
           <div class="course-grid">
             <div
               v-for="c in filteredCourses"
@@ -127,9 +148,9 @@
           <!-- 无课程空状态保护 (防黑屏) -->
           <div v-if="filteredCourses.length === 0" class="catalog-empty-state">
             <i class="ph-bold ph-magnifying-glass"></i>
-            <div class="empty-title">当前分类「{{ selectedCategory }}」暂无专属课程</div>
-            <p class="empty-sub">已为您准备全套 21 门核心官方课程</p>
-            <button class="btn-primary" @click="selectedCategory = '全部'">查看全部 21 门课程</button>
+            <div class="empty-title">未找到匹配的课程</div>
+            <p class="empty-sub">没有找到与「{{ courseSearchQuery || selectedCategory }}」相关的课程，系统已收录全套 42 门官方核心课程与 10,328 句题库</p>
+            <button class="btn-primary" @click="selectedCategory = '全部'; courseSearchQuery = ''">查看全部 42 门课程</button>
           </div>
         </section>
 

@@ -46,6 +46,7 @@ export function useCourse({ audio, onScoreAdd } = {}) {
   const courseViewMode = ref('catalog');
   const courseList = ref([]);
   const selectedCategory = ref('全部');
+  const courseSearchQuery = ref('');
 
   // Active selection
   const currentCourse = ref(null);
@@ -124,16 +125,34 @@ export function useCourse({ audio, onScoreAdd } = {}) {
     }
   };
 
-  const filteredCourses = computed(() => {
-    if (selectedCategory.value === '全部') {
-      return courseList.value;
-    }
-    const cat = selectedCategory.value;
+  const getCategoryCount = (catId) => {
+    if (catId === '全部') return courseList.value.length;
     return courseList.value.filter(c => {
-      if (Array.isArray(c.categories) && c.categories.includes(cat)) {
-        return true;
-      }
-      return c.category_name === cat || c.category === cat;
+      if (Array.isArray(c.categories) && c.categories.includes(catId)) return true;
+      return c.category_name === catId || c.category === catId;
+    }).length;
+  };
+
+  const filteredCourses = computed(() => {
+    let list = courseList.value;
+    if (selectedCategory.value !== '全部') {
+      const cat = selectedCategory.value;
+      list = list.filter(c => {
+        if (Array.isArray(c.categories) && c.categories.includes(cat)) {
+          return true;
+        }
+        return c.category_name === cat || c.category === cat;
+      });
+    }
+    const q = courseSearchQuery.value.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter(c => {
+      const matchTitle = (c.title || '').toLowerCase().includes(q);
+      const matchEng = (c.english_title || '').toLowerCase().includes(q);
+      const matchDesc = (c.description || '').toLowerCase().includes(q);
+      const matchTag = (c.tag || '').toLowerCase().includes(q);
+      const matchCat = Array.isArray(c.categories) && c.categories.some(tag => tag.toLowerCase().includes(q));
+      return matchTitle || matchEng || matchDesc || matchTag || matchCat;
     });
   });
 
@@ -559,6 +578,8 @@ export function useCourse({ audio, onScoreAdd } = {}) {
     courseViewMode,
     courseList,
     selectedCategory,
+    courseSearchQuery,
+    getCategoryCount,
     COURSE_CATEGORIES,
     filteredCourses,
     currentCourse,
