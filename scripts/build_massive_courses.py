@@ -83,7 +83,19 @@ def tag_syntax_chunks(en: str):
             chunks.append({'text': words[0], 'role': '主语', 'color': 'rose', 'ipa': get_ipa(words[0])})
             rem = words[1:]
     else:
-        rem = words
+        # Detect verb in words to extract subject
+        v_idx = -1
+        for i, w in enumerate(words):
+            clean_w = re.sub(r'[^a-zA-Z]', '', w).lower()
+            if i > 0 and clean_w in (BE_VERBS | MODALS | {'make', 'makes', 'made', 'think', 'thinks', 'thought', 'know', 'knows', 'knew', 'want', 'wants', 'wanted', 'see', 'sees', 'saw', 'get', 'gets', 'got', 'take', 'takes', 'took', 'give', 'gives', 'gave', 'feel', 'feels', 'felt', 'hold', 'holds', 'held', 'set', 'sets', 'come', 'comes', 'came', 'go', 'goes', 'went', 'find', 'finds', 'found', 'tell', 'tells', 'told', 'love', 'loves', 'loved', 'relate', 'relates', 'beat', 'beats', 'live', 'lives', 'lived', 'die', 'dies', 'died'}):
+                v_idx = i
+                break
+        if v_idx != -1:
+            subj_text = ' '.join(words[:v_idx])
+            chunks.append({'text': subj_text, 'role': '主语', 'color': 'rose', 'ipa': get_ipa(subj_text)})
+            rem = words[v_idx:]
+        else:
+            rem = words
 
     if rem:
         adv_idx = -1

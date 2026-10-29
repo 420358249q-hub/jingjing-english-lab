@@ -45,7 +45,7 @@ export function useCourse({ audio, onScoreAdd } = {}) {
   // View state: 'catalog' (课程大厅) | 'chapters' (章节列表) | 'practice' (研习工坊)
   const courseViewMode = ref('catalog');
   const courseList = ref([]);
-  const selectedCategory = ref('全部');
+  const courseSelectedCategory = ref('全部');
   const courseSearchQuery = ref('');
 
   // Active selection
@@ -53,7 +53,7 @@ export function useCourse({ audio, onScoreAdd } = {}) {
   const chapters = ref([]);
   const currentChapter = ref(null);
   const chapterDrills = ref([]);
-  const currentDrillIndex = ref(0);
+  const courseDrillIndex = ref(0);
 
   // Drill practice interactive state
   const userTypedWords = ref([]); // array of strings for each word
@@ -125,18 +125,19 @@ export function useCourse({ audio, onScoreAdd } = {}) {
     }
   };
 
-  const getCategoryCount = (catId) => {
+  const getCourseCategoryCount = (catId) => {
     if (catId === '全部') return courseList.value.length;
     return courseList.value.filter(c => {
       if (Array.isArray(c.categories) && c.categories.includes(catId)) return true;
       return c.category_name === catId || c.category === catId;
     }).length;
   };
+  const getCategoryCount = getCourseCategoryCount;
 
   const filteredCourses = computed(() => {
     let list = courseList.value;
-    if (selectedCategory.value !== '全部') {
-      const cat = selectedCategory.value;
+    if (courseSelectedCategory.value !== '全部') {
+      const cat = courseSelectedCategory.value;
       list = list.filter(c => {
         if (Array.isArray(c.categories) && c.categories.includes(cat)) {
           return true;
@@ -276,7 +277,7 @@ export function useCourse({ audio, onScoreAdd } = {}) {
         const data = await res.json();
         currentChapter.value = data;
         chapterDrills.value = data.drills || [];
-        currentDrillIndex.value = Math.max(0, Math.min(startIdx, chapterDrills.value.length - 1));
+        courseDrillIndex.value = Math.max(0, Math.min(startIdx, chapterDrills.value.length - 1));
         initDrillSlotState();
         courseViewMode.value = 'practice';
         startStudyTimer();
@@ -291,15 +292,16 @@ export function useCourse({ audio, onScoreAdd } = {}) {
     }
   };
 
-  const currentDrill = computed(() => {
-    return chapterDrills.value[currentDrillIndex.value] || null;
+  const courseDrill = computed(() => {
+    return chapterDrills.value[courseDrillIndex.value] || null;
   });
+  const currentDrill = courseDrill;
 
   // Prepare words for underline slots
   const drillWords = computed(() => {
-    if (!currentDrill.value) return [];
+    if (!courseDrill.value) return [];
     // Clean words without ending punctuation
-    return currentDrill.value.english
+    return courseDrill.value.english
       .split(/\s+/)
       .map(w => w.replace(/[.,?!;:'"()]/g, '').trim())
       .filter(w => w.length > 0);
@@ -315,16 +317,16 @@ export function useCourse({ audio, onScoreAdd } = {}) {
   };
 
   const prewarmDrillAudio = () => {
-    const drill = currentDrill.value;
+    const drill = courseDrill.value;
     if (!drill || !audio || !audio.prewarmAudio) return;
     if (drill.english) audio.prewarmAudio(drill.english);
-    const nextDrill = chapterDrills.value[currentDrillIndex.value + 1];
+    const nextDrill = chapterDrills.value[courseDrillIndex.value + 1];
     if (nextDrill && nextDrill.english) audio.prewarmAudio(nextDrill.english);
   };
 
   // Play Kokoro neural TTS for current drill
   const playCurrentDrillAudio = () => {
-    const drill = currentDrill.value;
+    const drill = courseDrill.value;
     if (drill && drill.english && audio && audio.playTTS) {
       audio.playTTS(drill.english, 'course_drill_' + drill.id);
     }
@@ -338,7 +340,7 @@ export function useCourse({ audio, onScoreAdd } = {}) {
 
   // Underline Slot Typing Input Handler
   const handleKeyInput = (key) => {
-    if (courseViewMode.value !== 'practice' || !currentDrill.value) return;
+    if (courseViewMode.value !== 'practice' || !courseDrill.value) return;
 
     const words = drillWords.value;
     if (!words.length) return;
@@ -385,7 +387,7 @@ export function useCourse({ audio, onScoreAdd } = {}) {
 
   // Reveal answer / hint
   const revealAnswer = () => {
-    if (!currentDrill.value) return;
+    if (!courseDrill.value) return;
     showAnswerHint.value = true;
     const words = drillWords.value;
     userTypedWords.value = words.map(w => w);
@@ -407,7 +409,7 @@ export function useCourse({ audio, onScoreAdd } = {}) {
       playCurrentDrillAudio();
 
       // Record progress
-      recordDrillCompletion(currentDrill.value.id);
+      recordDrillCompletion(courseDrill.value.id);
 
       // Auto advance after 1.6s
       setTimeout(() => {
@@ -441,8 +443,8 @@ export function useCourse({ audio, onScoreAdd } = {}) {
   };
 
   const nextChapterDrill = () => {
-    if (currentDrillIndex.value < chapterDrills.value.length - 1) {
-      currentDrillIndex.value += 1;
+    if (courseDrillIndex.value < chapterDrills.value.length - 1) {
+      courseDrillIndex.value += 1;
       initDrillSlotState();
       prewarmDrillAudio();
       setTimeout(playCurrentDrillAudio, 200);
@@ -454,8 +456,8 @@ export function useCourse({ audio, onScoreAdd } = {}) {
   };
 
   const prevChapterDrill = () => {
-    if (currentDrillIndex.value > 0) {
-      currentDrillIndex.value -= 1;
+    if (courseDrillIndex.value > 0) {
+      courseDrillIndex.value -= 1;
       initDrillSlotState();
       prewarmDrillAudio();
       setTimeout(playCurrentDrillAudio, 200);
@@ -463,8 +465,8 @@ export function useCourse({ audio, onScoreAdd } = {}) {
   };
 
   const markMastered = () => {
-    if (!currentDrill.value) return;
-    recordDrillCompletion(currentDrill.value.id);
+    if (!courseDrill.value) return;
+    recordDrillCompletion(courseDrill.value.id);
     if (audio && audio.playAudioCue) audio.playAudioCue('pop');
     nextChapterDrill();
   };
@@ -577,17 +579,21 @@ export function useCourse({ audio, onScoreAdd } = {}) {
   return {
     courseViewMode,
     courseList,
-    selectedCategory,
+    courseSelectedCategory,
+    selectedCategory: courseSelectedCategory,
     courseSearchQuery,
-    getCategoryCount,
+    getCourseCategoryCount,
+    getCategoryCount: getCourseCategoryCount,
     COURSE_CATEGORIES,
     filteredCourses,
     currentCourse,
     chapters,
     currentChapter,
     chapterDrills,
-    currentDrillIndex,
-    currentDrill,
+    courseDrillIndex,
+    currentDrillIndex: courseDrillIndex,
+    courseDrill,
+    currentDrill: courseDrill,
     drillWords,
     userTypedWords,
     activeWordSlot,

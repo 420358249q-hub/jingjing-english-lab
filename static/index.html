@@ -86,10 +86,10 @@
                 v-for="cat in COURSE_CATEGORIES"
                 :key="cat.id"
                 class="catalog-cat-pill"
-                :class="{ active: selectedCategory === cat.id }"
-                @click="selectedCategory = cat.id">
+                :class="{ active: courseSelectedCategory === cat.id }"
+                @click="courseSelectedCategory = cat.id">
                 <span>{{ cat.label }}</span>
-                <span class="cat-pill-count">{{ getCategoryCount(cat.id) }}</span>
+                <span class="cat-pill-count">{{ getCourseCategoryCount(cat.id) }}</span>
               </button>
             </div>
             <div class="catalog-request-link" @click="openCustomModal">
@@ -149,8 +149,8 @@
           <div v-if="filteredCourses.length === 0" class="catalog-empty-state">
             <i class="ph-bold ph-magnifying-glass"></i>
             <div class="empty-title">未找到匹配的课程</div>
-            <p class="empty-sub">没有找到与「{{ courseSearchQuery || selectedCategory }}」相关的课程，系统已收录全套 42 门官方核心课程与 10,328 句题库</p>
-            <button class="btn-primary" @click="selectedCategory = '全部'; courseSearchQuery = ''">查看全部 42 门课程</button>
+            <p class="empty-sub">没有找到与「{{ courseSearchQuery || courseSelectedCategory }}」相关的课程，系统已收录全套 42 门官方核心课程与 10,328 句题库</p>
+            <button class="btn-primary" @click="courseSelectedCategory = '全部'; courseSearchQuery = ''">查看全部 42 门课程</button>
           </div>
         </section>
 
@@ -209,7 +209,7 @@
         </section>
 
         <!-- Tier 3: 语法成分与音标研习工坊 (Drill Screen) -->
-        <section v-if="courseViewMode === 'practice' && currentDrill" class="practice-container">
+        <section v-if="courseViewMode === 'practice' && courseDrill" class="practice-container">
           <!-- 顶部工坊导航 -->
           <div class="practice-top-bar">
             <div class="practice-breadcrumbs">
@@ -217,7 +217,7 @@
                 <i class="ph-bold ph-arrow-left"></i><span>返回章节</span>
               </button>
               <span class="practice-breadcrumb-title">
-                {{ currentCourse?.title }} · {{ currentChapter?.chapter_title }} (第 {{ currentDrillIndex + 1 }} / {{ chapterDrills.length }} 句)
+                {{ currentCourse?.title }} · {{ currentChapter?.chapter_title }} (第 {{ courseDrillIndex + 1 }} / {{ chapterDrills.length }} 句)
               </span>
             </div>
 
@@ -248,7 +248,7 @@
             <div class="drill-phonetic-card">
               <div class="drill-chunks-row">
                 <div
-                  v-for="(chunk, cIdx) in currentDrill.chunks"
+                  v-for="(chunk, cIdx) in courseDrill.chunks"
                   :key="cIdx"
                   class="chunk-column"
                   @click="playChunkAudio(chunk.text)"
@@ -260,7 +260,7 @@
               </div>
 
               <div class="drill-translation-row">
-                <span class="drill-chinese-title">{{ currentDrill.chinese }}</span>
+                <span class="drill-chinese-title">{{ courseDrill.chinese }}</span>
                 <button class="drill-tts-speaker-btn" @click="playCurrentDrillAudio">
                   <i class="ph-bold ph-speaker-high"></i>
                   <span>朗读整句</span>
@@ -274,7 +274,7 @@
               <i class="ph-fill ph-hand-heart drill-scene-svg text-9xl"></i>
               <div class="drill-scene-caption">
                 <i class="ph-bold ph-sparkle"></i>
-                <span>“{{ currentDrill.chinese }}”</span>
+                <span>“{{ courseDrill.chinese }}”</span>
               </div>
             </div>
 
@@ -298,7 +298,7 @@
                 </div>
               </div>
               <div class="slot-hint-text">
-                <span v-if="showAnswerHint" class="text-blue-400 font-medium">提示：{{ currentDrill.english }}</span>
+                <span v-if="showAnswerHint" class="text-blue-400 font-medium">提示：{{ courseDrill.english }}</span>
                 <span v-else>盲打跟读：键盘直接敲击英文字母输入 · 按空格跳格</span>
               </div>
             </div>
