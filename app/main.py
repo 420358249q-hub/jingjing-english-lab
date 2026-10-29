@@ -32,6 +32,7 @@ from app.tts_engine import (
     check_kokoro_status,
     synthesize_speech
 )
+from app.telemetry import report_telemetry_issue, get_telemetry_token
 
 app = FastAPI(title="静静学习系统 - AI 英语私教研习室")
 
@@ -192,11 +193,34 @@ async def handle_evaluate(req: EvaluateRequest):
     )
     return result
 
+class FeedbackRequest(BaseModel):
+    notes: str
+    error_logs: Optional[List[Dict[str, Any]]] = []
+    user_agent: Optional[str] = ""
+
+@app.post("/api/system/feedback")
+async def handle_feedback(req: FeedbackRequest, background_tasks: BackgroundTasks):
+    if not req.notes.strip():
+        raise HTTPException(status_code=400, detail="反馈内容不能为空")
+    
+    background_tasks.add_task(
+        report_telemetry_issue,
+        category="用户界面报障",
+        summary=req.notes[:60],
+        detail=req.notes,
+        context={
+            "frontend_logs": req.error_logs,
+            "user_agent": req.user_agent
+        },
+        is_user_feedback=True
+    )
+    return {"status": "success", "message": "反馈已提交，正在自动推送至 GitHub Issue"}
+
 class WarmupRequest(BaseModel):
     texts: List[str]
 
 @app.post("/api/tts")
-async def handle_tts(req: TTSRequest):
+async def handle_tts(req: TTSRequest, background_tasks: BackgroundTasks):
     if not req.text.strip():
         raise HTTPException(status_code=400, detail="Text cannot be empty")
     
@@ -222,6 +246,13 @@ async def handle_tts(req: TTSRequest):
         )
     except Exception as e:
         print(f"[TTS Error] {e}")
+        background_tasks.add_task(
+            report_telemetry_issue,
+            category="语音引擎(Kokoro TTS)",
+            summary=f"发音异常: {str(e)[:50]}",
+            detail=str(e),
+            context={"text": req.text, "voice": req.voice, "rate": req.rate}
+        )
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/tts/warmup")
@@ -254,10 +285,10 @@ async def handle_transcribe(file: UploadFile = File(...)):
         segments, info = whisper.transcribe(tmp_path, language="en", beam_size=3)
         transcribed_text = " ".join([s.text for s in segments]).strip()
 
-        import os
-import datetime
-        try: os.unlink(tmp_path)
-        except: pass
+        try:
+            os.unlink(tmp_path)
+        except:
+            pass
 
         return {"status": "success", "text": transcribed_text}
     except Exception as e:
