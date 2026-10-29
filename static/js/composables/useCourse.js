@@ -128,9 +128,13 @@ export function useCourse({ audio, onScoreAdd } = {}) {
     if (selectedCategory.value === '全部') {
       return courseList.value;
     }
-    return courseList.value.filter(c =>
-      c.category_name === selectedCategory.value || c.category === selectedCategory.value
-    );
+    const cat = selectedCategory.value;
+    return courseList.value.filter(c => {
+      if (Array.isArray(c.categories) && c.categories.includes(cat)) {
+        return true;
+      }
+      return c.category_name === cat || c.category === cat;
+    });
   });
 
   // ---- Course Chapter Status & Progress Calculation ----

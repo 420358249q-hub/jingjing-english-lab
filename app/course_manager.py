@@ -37,6 +37,7 @@ def get_courses_summary() -> List[Dict[str, Any]]:
             "english_title": c["english_title"],
             "category": c["category"],
             "category_name": c["category_name"],
+            "categories": c.get("categories", [c.get("category", "日常实用")]),
             "tag": c.get("tag", "精选推荐"),
             "tag_style": c.get("tag_style", "mint"),
             "view_count": c.get("view_count", 8000),
