@@ -11,21 +11,25 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 COURSES_DB_PATH = os.path.join(BASE_DIR, "app", "courses_database.json")
 
 _courses_cache: Optional[List[Dict[str, Any]]] = None
+_courses_mtime: float = 0.0
 
 def load_courses() -> List[Dict[str, Any]]:
-    global _courses_cache
-    if _courses_cache is not None:
+    global _courses_cache, _courses_mtime
+    if not os.path.exists(COURSES_DB_PATH):
+        return []
+    
+    current_mtime = os.path.getmtime(COURSES_DB_PATH)
+    if _courses_cache is not None and current_mtime == _courses_mtime:
         return _courses_cache
     
-    if os.path.exists(COURSES_DB_PATH):
-        try:
-            with open(COURSES_DB_PATH, "r", encoding="utf-8") as f:
-                _courses_cache = json.load(f)
-                return _courses_cache
-        except Exception as e:
-            print(f"[CourseManager Error] Failed to load courses: {e}")
-            return []
-    return []
+    try:
+        with open(COURSES_DB_PATH, "r", encoding="utf-8") as f:
+            _courses_cache = json.load(f)
+            _courses_mtime = current_mtime
+            return _courses_cache
+    except Exception as e:
+        print(f"[CourseManager Error] Failed to load courses: {e}")
+        return _courses_cache or []
 
 def get_courses_summary() -> List[Dict[str, Any]]:
     all_courses = load_courses()
