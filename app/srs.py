@@ -118,6 +118,14 @@ class SRSStore:
                     created_at  TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS idx_chat_user ON chat_history(user_id, created_at);
+
+                CREATE TABLE IF NOT EXISTS course_progress (
+                    user_id     TEXT NOT NULL,
+                    course_id   TEXT NOT NULL,
+                    data        TEXT NOT NULL,
+                    updated_at  TEXT NOT NULL,
+                    PRIMARY KEY (user_id, course_id)
+                );
                 """
             )
             conn.execute(
@@ -526,6 +534,35 @@ class SRSStore:
                 (new_stars, new_coins, new_streak, _iso(_now()), user_id),
             )
         return self.get_profile(user_id)
+
+    # ---------------- course progress persistence ----------------
+    def get_all_progress(self, user_id: str = DEFAULT_USER) -> Dict[str, Any]:
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT course_id, data FROM course_progress WHERE user_id=?", (user_id,)
+            ).fetchall()
+        result = {}
+        for r in rows:
+            try:
+                result[r["course_id"]] = json.loads(r["data"])
+            except Exception:
+                pass
+        return result
+
+    def save_all_progress(self, progress_map: Dict[str, Any], user_id: str = DEFAULT_USER) -> bool:
+        now_str = _iso(_now())
+        with _write_lock, self._conn() as conn:
+            for cid, data in (progress_map or {}).items():
+                if not isinstance(data, dict):
+                    continue
+                data_json = json.dumps(data, ensure_ascii=False)
+                conn.execute(
+                    """INSERT INTO course_progress (user_id, course_id, data, updated_at)
+                       VALUES (?, ?, ?, ?)
+                       ON CONFLICT(user_id, course_id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at""",
+                    (user_id, cid, data_json, now_str)
+                )
+        return True
 
 
 srs = SRSStore()

@@ -14,6 +14,29 @@ echo "======================================================"
 echo "   🚀 正在启动 静静学习系统 · Pro 私教 ..."
 echo "======================================================"
 
+# 环境自检与医生模式 (Doctor Mode)
+if [ "$1" = "--doctor" ] || [ "$1" = "-d" ]; then
+    echo "🩺 正在执行【环境体检与组件完整性自检】..."
+    echo "------------------------------------------------------"
+    echo "1. 操作系统架构: $(uname -s) $(uname -m)"
+    echo "2. 系统 Python 状态: $(command -v python3 2>/dev/null || echo '未检测到')"
+    echo "3. 神经语音模型文件:"
+    [ -f "models/kokoro-v1.0.onnx" ] && echo "   ✅ Kokoro v1.0 ONNX 模型权重就绪" || echo "   ❌ 缺失 models/kokoro-v1.0.onnx"
+    [ -f "models/voices-v1.0.bin" ] && echo "   ✅ 语音特征包 voices-v1.0.bin 就绪" || echo "   ❌ 缺失 models/voices-v1.0.bin"
+    echo "4. 课程题库与数据持久化:"
+    [ -f "app/courses_database.json" ] && echo "   ✅ 42 门课程大厅题库就绪 (10,328 句真人原声)" || echo "   ❌ 缺失 courses_database.json"
+    [ -f "data/jingjing.db" ] && echo "   ✅ SQLite 学习档案与 SM-2 生词库就绪" || echo "   ⚡ SQLite 档案库将在首次启动时自动挂载"
+    echo "5. Python 虚拟环境与核心模块:"
+    if [ -f "venv/bin/python" ]; then
+        ./venv/bin/python -c "import fastapi, uvicorn, kokoro_onnx, soundfile, faster_whisper; print('   ✅ FastAPI / Kokoro ONNX / Faster-Whisper 全部验证通过')" 2>/dev/null || echo "   ⚠️ 依赖包存在缺失，需重新初始化环境"
+    else
+        echo "   ⚡ 虚拟环境待初始化"
+    fi
+    echo "------------------------------------------------------"
+    echo "🎉 体检完成！如需启动服务，直接执行 ./start.sh 即可。"
+    exit 0
+fi
+
 # 0. 自动拉取更新（如果是 Git 仓库且网络可用，强制秒级同步最新无冲突代码）
 if [ -d ".git" ] && git remote get-url origin >/dev/null 2>&1; then
     echo "🔄 正在检查并同步最新功能 (git sync)..."

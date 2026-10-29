@@ -118,9 +118,39 @@ export function useAudio() {
     });
   };
 
-  // ---- 双轨缓存系统（AudioBuffer + Blob URL） ----
+  // ---- 双轨缓存系统（AudioBuffer + Blob URL，带 LRU 自动内存回收防泄漏） ----
   const audioDataCache = new Map();
   const audioFetchingPromises = new Map();
+  const MAX_AUDIO_CACHE_SIZE = 60;
+
+  const setAudioCache = (key, data) => {
+    if (audioDataCache.has(key)) {
+      audioDataCache.delete(key);
+    } else if (audioDataCache.size >= MAX_AUDIO_CACHE_SIZE) {
+      // 达到容量阈值，淘汰最旧的音频，显式释放底层 Blob URL 句柄，消除内存泄漏
+      const oldestKey = audioDataCache.keys().next().value;
+      const oldestData = audioDataCache.get(oldestKey);
+      if (oldestData && oldestData.blobUrl) {
+        try {
+          URL.revokeObjectURL(oldestData.blobUrl);
+        } catch (e) {}
+      }
+      audioDataCache.delete(oldestKey);
+    }
+    audioDataCache.set(key, data);
+  };
+
+  const clearAudioCache = () => {
+    for (const data of audioDataCache.values()) {
+      if (data && data.blobUrl) {
+        try {
+          URL.revokeObjectURL(data.blobUrl);
+        } catch (e) {}
+      }
+    }
+    audioDataCache.clear();
+  };
+  window.addEventListener('beforeunload', clearAudioCache);
 
   const fetchAudioData = async (text, mode = 'normal') => {
     const clean = text.replace(/[*#_`]/g, '').trim();
@@ -129,7 +159,11 @@ export function useAudio() {
     const cacheKey = `${clean}|${mode}|${rateParam}`;
 
     if (audioDataCache.has(cacheKey)) {
-      return audioDataCache.get(cacheKey);
+      const data = audioDataCache.get(cacheKey);
+      // 重新标记为最近使用
+      audioDataCache.delete(cacheKey);
+      audioDataCache.set(cacheKey, data);
+      return data;
     }
     if (audioFetchingPromises.has(cacheKey)) {
       return await audioFetchingPromises.get(cacheKey);
@@ -172,7 +206,7 @@ export function useAudio() {
           blobUrl,
           duration: audioBuffer ? audioBuffer.duration : 2.5
         };
-        audioDataCache.set(cacheKey, data);
+        setAudioCache(cacheKey, data);
         return data;
       } finally {
         audioFetchingPromises.delete(cacheKey);
@@ -457,6 +491,7 @@ export function useAudio() {
     playTokenAudio,
     prewarmAudio,
     stopWordAudio,
-    playAudioCue
+    playAudioCue,
+    clearAudioCache
   };
 }

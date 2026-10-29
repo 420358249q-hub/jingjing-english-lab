@@ -30,6 +30,13 @@ if not os.path.exists(KOKORO_VOICES_PATH):
 
 _kokoro_instance = None
 _kokoro_available = False
+_kokoro_semaphore = None
+
+def get_kokoro_semaphore():
+    global _kokoro_semaphore
+    if _kokoro_semaphore is None:
+        _kokoro_semaphore = asyncio.Semaphore(2)
+    return _kokoro_semaphore
 
 def check_kokoro_status() -> Dict[str, Any]:
     global _kokoro_available
@@ -197,7 +204,9 @@ async def synthesize_kokoro(
         return buffer.getvalue()
 
     try:
-        return await loop.run_in_executor(None, _run)
+        sem = get_kokoro_semaphore()
+        async with sem:
+            return await loop.run_in_executor(None, _run)
     except Exception as e:
         print(f"[TTS] Kokoro synthesis error: {e}")
         return None

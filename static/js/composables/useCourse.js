@@ -60,11 +60,48 @@ export function useCourse({ audio, onScoreAdd } = {}) {
   const activeWordSlot = ref(0);   // currently focused word index
   const isDrillCorrect = ref(false);
   const showAnswerHint = ref(false);
-  const drillPracticeMode = ref('typing'); // 'typing' | 'blocks' | 'audio'
+  const drillPracticeMode = ref('typing'); // 'typing' | 'blocks' | 'shadow'
   const isPracticing = ref(false);
+
+  // AI 影子跟读与发音评测状态
+  const isRecordingSpeech = ref(false);
+  const isEvaluatingSpeech = ref(false);
+  const speechScore = ref(null);
+  const speechRecognizedText = ref('');
+  const speechWordMatches = ref([]);
+  let mediaRecorder = null;
+  let audioChunks = [];
 
   // Progress store
   const storedProgress = ref(loadStoredProgress());
+
+  // 后端 SQLite 进度同步防抖计时器
+  let syncTimer = null;
+  const syncProgressToBackend = (data) => {
+    if (syncTimer) clearTimeout(syncTimer);
+    syncTimer = setTimeout(async () => {
+      try {
+        await fetch('/api/progress', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+      } catch (e) {}
+    }, 1200);
+  };
+
+  const loadBackendProgress = async () => {
+    try {
+      const res = await fetch('/api/progress');
+      if (res.ok) {
+        const serverProgress = await res.json();
+        if (serverProgress && Object.keys(serverProgress).length > 0) {
+          storedProgress.value = { ...storedProgress.value, ...serverProgress };
+          saveStoredProgress(storedProgress.value);
+        }
+      }
+    } catch (e) {}
+  };
 
   // Timer for tracking active study duration
   let studyTimer = null;
@@ -111,6 +148,7 @@ export function useCourse({ audio, onScoreAdd } = {}) {
     p[cid].chapters[chid].seconds = (p[cid].chapters[chid].seconds || 0) + seconds;
     p[cid].chapters[chid].status = 'recent';
     saveStoredProgress(p);
+    syncProgressToBackend(p);
   };
 
   // ---- Fetch Courses ----
@@ -418,6 +456,9 @@ export function useCourse({ audio, onScoreAdd } = {}) {
     activeWordSlot.value = 0;
     isDrillCorrect.value = false;
     showAnswerHint.value = false;
+    speechScore.value = null;
+    speechRecognizedText.value = '';
+    speechWordMatches.value = [];
   };
 
   const prewarmDrillAudio = () => {
@@ -440,6 +481,78 @@ export function useCourse({ audio, onScoreAdd } = {}) {
   const playChunkAudio = (text) => {
     if (!text || !audio || !audio.playTTS) return;
     audio.playTTS(text, 'chunk_' + text);
+  };
+
+  // ---- AI 影子跟读 (Shadow Reading) 录音与实时发音评测 ----
+  const startShadowRecording = async () => {
+    if (isRecordingSpeech.value) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) audioChunks.push(e.data);
+      };
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        stream.getTracks().forEach(t => t.stop());
+        await evaluateShadowSpeech(audioBlob);
+      };
+      mediaRecorder.start();
+      isRecordingSpeech.value = true;
+      speechScore.value = null;
+      speechRecognizedText.value = '';
+      if (audio && audio.playAudioCue) audio.playAudioCue('click');
+    } catch (e) {
+      alert('请开启浏览器麦克风权限以体验 AI 影子跟读评测');
+    }
+  };
+
+  const stopShadowRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+      isRecordingSpeech.value = false;
+      isEvaluatingSpeech.value = true;
+    }
+  };
+
+  const evaluateShadowSpeech = async (audioBlob) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', audioBlob, 'speech.webm');
+      const res = await fetch('/api/transcribe', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      const recognized = (data.text || '').trim();
+      speechRecognizedText.value = recognized;
+
+      const target = (courseDrill.value ? courseDrill.value.english : '').trim();
+      const targetWords = target.replace(/[,.?!:;"'()]/g, '').toLowerCase().split(/\s+/).filter(Boolean);
+      const recWords = recognized.replace(/[,.?!:;"'()]/g, '').toLowerCase().split(/\s+/).filter(Boolean);
+
+      let matchedCount = 0;
+      const matches = targetWords.map(tw => {
+        const isMatched = recWords.includes(tw);
+        if (isMatched) matchedCount++;
+        return { word: tw, matched: isMatched };
+      });
+
+      speechWordMatches.value = matches;
+      const calcScore = targetWords.length > 0 ? Math.round((matchedCount / targetWords.length) * 100) : 0;
+      speechScore.value = calcScore;
+
+      if (calcScore >= 75) {
+        if (audio && audio.playAudioCue) audio.playAudioCue('pop');
+        if (onScoreAdd) onScoreAdd(20);
+        recordDrillCompletion(courseDrill.value.id);
+      }
+    } catch (e) {
+      console.warn('[Shadow evaluation error]:', e);
+    } finally {
+      isEvaluatingSpeech.value = false;
+    }
   };
 
   // Underline Slot Typing Input Handler
@@ -672,6 +785,7 @@ export function useCourse({ audio, onScoreAdd } = {}) {
 
   onMounted(() => {
     loadCourses();
+    loadBackendProgress();
     window.addEventListener('keydown', handleKeydown);
   });
 
@@ -705,6 +819,13 @@ export function useCourse({ audio, onScoreAdd } = {}) {
     isDrillCorrect,
     showAnswerHint,
     drillPracticeMode,
+    isRecordingSpeech,
+    isEvaluatingSpeech,
+    speechScore,
+    speechRecognizedText,
+    speechWordMatches,
+    startShadowRecording,
+    stopShadowRecording,
     courseStudyTimeText,
     courseRecentTimeText,
     courseProgressPercent,

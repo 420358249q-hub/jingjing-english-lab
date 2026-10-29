@@ -253,6 +253,24 @@
             </div>
 
             <div class="practice-top-actions">
+              <!-- 研习模式切换：键盘拼写 vs AI 影子跟读 -->
+              <div class="practice-mode-pills">
+                <button
+                  class="mode-pill-btn"
+                  :class="{ active: drillPracticeMode === 'typing' }"
+                  @click="drillPracticeMode = 'typing'">
+                  <i class="ph-bold ph-keyboard"></i>
+                  <span>拼写盲打</span>
+                </button>
+                <button
+                  class="mode-pill-btn"
+                  :class="{ active: drillPracticeMode === 'shadow' }"
+                  @click="drillPracticeMode = 'shadow'">
+                  <i class="ph-bold ph-microphone"></i>
+                  <span>AI 影子跟读</span>
+                </button>
+              </div>
+
               <div class="speed-selector">
                 <button class="speed-btn" :class="{ active: speechRate === 0.8 }" @click="setSpeechRate(0.8)">
                   <span>0.8x 慢速</span>
@@ -323,8 +341,8 @@
               </div>
             </div>
 
-            <!-- 3. 核心下划线槽位填空 (Interactive Underline Slots) -->
-            <div class="drill-slots-section">
+            <!-- 3.A 核心下划线槽位填空 (Interactive Underline Slots) -->
+            <div v-if="drillPracticeMode === 'typing'" class="drill-slots-section">
               <div class="slots-row">
                 <div
                   v-for="(word, wIdx) in drillWords"
@@ -345,6 +363,63 @@
               <div class="slot-hint-text">
                 <span v-if="showAnswerHint" class="text-blue-400 font-medium">提示：{{ courseDrill.english }}</span>
                 <span v-else>盲打跟读：键盘直接敲击英文字母输入 · 按空格跳格</span>
+              </div>
+            </div>
+
+            <!-- 3.B AI 影子跟读录音与 Whisper 发音精准评测 (Voice Shadow Reading & Scoring) -->
+            <div v-else-if="drillPracticeMode === 'shadow'" class="drill-shadow-section">
+              <div class="shadow-card-content">
+                <div class="shadow-target-text">
+                  <span
+                    v-for="(match, mIdx) in (speechWordMatches.length ? speechWordMatches : drillWords.map(w => ({ word: w, matched: null })))"
+                    :key="mIdx"
+                    class="shadow-word-pill"
+                    :class="{
+                      'matched': match.matched === true,
+                      'missed': match.matched === false
+                    }">
+                    {{ match.word }}
+                  </span>
+                </div>
+
+                <!-- 录音主操作区 -->
+                <div class="shadow-controls">
+                  <button
+                    v-if="!isRecordingSpeech && !isEvaluatingSpeech"
+                    class="shadow-record-btn start"
+                    @click="startShadowRecording">
+                    <i class="ph-fill ph-microphone"></i>
+                    <span>点击开始大声跟读</span>
+                  </button>
+
+                  <button
+                    v-else-if="isRecordingSpeech"
+                    class="shadow-record-btn recording"
+                    @click="stopShadowRecording">
+                    <i class="ph-fill ph-stop animate-pulse"></i>
+                    <span>正在收音… 读完点击完成评测</span>
+                  </button>
+
+                  <div v-else-if="isEvaluatingSpeech" class="shadow-evaluating-badge">
+                    <i class="ph-bold ph-circle-notch animate-spin"></i>
+                    <span>Whisper 神经模型正在精准评测发音…</span>
+                  </div>
+                </div>
+
+                <!-- 评测得分结果 -->
+                <div v-if="speechScore !== null" class="shadow-score-banner" :class="{ 'pass': speechScore >= 75 }">
+                  <div class="score-number-badge">
+                    <i class="ph-fill ph-star"></i>
+                    <span>发音契合度 <strong>{{ speechScore }}%</strong></span>
+                  </div>
+                  <div class="score-recognized-line">
+                    <span class="label">识别转写：</span>
+                    <span class="text">“{{ speechRecognizedText || '未录入清晰声音' }}”</span>
+                  </div>
+                  <div v-if="speechScore >= 75" class="score-reward-tip">
+                    <span>✨ 太棒了！发音纯正饱满 (+20 学习积分)</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -797,14 +872,43 @@
         </div>
       </div>
 
-      <!-- ========== 4. 核心生词手账 ========== -->
+      <!-- ========== 4. 核心生词手账（艾宾浩斯 SM-2 记忆调度） ========== -->
       <div v-if="activeTab === 'notebook'" class="notebook-page">
         <div class="report-head">
           <div>
             <h2><i class="ph-bold ph-bookmarks"></i>核心生词手账</h2>
-            <p>收录造句研习与口语对练中的地道表达与生词难点</p>
+            <p>收录造句研习与口语对练中的地道表达与生词难点 · 艾宾浩斯 SM-2 智能复习</p>
           </div>
-          <span class="muted-count">已收藏 {{ notebookItems.length }} 条</span>
+          <div class="notebook-stats-pills">
+            <span class="muted-count"><i class="ph-fill ph-books"></i> 收藏 {{ notebookItems.length }} 词</span>
+            <span class="muted-count due"><i class="ph-fill ph-bell-ringing"></i> 今日待复习 {{ dueCards.length }} 词</span>
+            <span class="muted-count mastered"><i class="ph-fill ph-check-circle"></i> 已掌握 {{ srsStats.mastered || 0 }} 词</span>
+          </div>
+        </div>
+
+        <!-- 艾宾浩斯今日待复习速测横幅 -->
+        <div v-if="dueCards.length > 0" class="srs-due-banner">
+          <div class="srs-banner-head">
+            <div class="title-row">
+              <i class="ph-fill ph-sparkle"></i>
+              <span>艾宾浩斯遗忘曲线 · 今日待复习 ({{ dueCards.length }} 词到期)</span>
+            </div>
+            <p class="desc">点击单词发音，根据记忆清晰度自评，系统自动按 SM-2 算法调度下一次复习周期</p>
+          </div>
+          <div class="srs-cards-track">
+            <div v-for="card in dueCards.slice(0, 6)" :key="card.id" class="srs-mini-card">
+              <div class="srs-en" @click="playTTS(card.english, 'srs_' + card.id)">
+                <span>{{ card.english }}</span>
+                <i class="ph-bold ph-speaker-high"></i>
+              </div>
+              <div class="srs-zh">{{ card.chinese || '点击评分记录记忆周期' }}</div>
+              <div class="srs-actions">
+                <button class="srs-btn forgot" @click="submitReview(card.id, 1)" title="遗忘 (重置为1天)">忘记</button>
+                <button class="srs-btn fuzzy" @click="submitReview(card.id, 3)" title="模糊 (保持当前)">模糊</button>
+                <button class="srs-btn master" @click="submitReview(card.id, 5)" title="牢记 (间隔递增)">牢记</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div v-if="notebookItems.length" class="notebook-grid">

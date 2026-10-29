@@ -33,11 +33,18 @@ const app = createApp({
     const chat = useChat({ audio, addScore: drill.addScore, selectedModel });
     const course = useCourse({
       audio,
-      onScoreAdd: (pts) => {
+      onScoreAdd: async (pts) => {
         drill.score.value += pts;
         drill.streak.value += 1;
         drill.persistScore();
         drill.persistStreak();
+        try {
+          await fetch('/api/profile/earn', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stars: pts, coins: pts })
+          });
+        } catch (e) {}
       }
     });
 
@@ -49,15 +56,27 @@ const app = createApp({
     // ---- 生命周期初始化 ----
     onMounted(async () => {
       try {
-        const res = await fetch('/api/status');
-        if (res.ok) {
-          systemStatus.value = await res.json();
+        const [statusRes, profileRes] = await Promise.all([
+          fetch('/api/status'),
+          fetch('/api/profile')
+        ]);
+        if (statusRes.ok) {
+          systemStatus.value = await statusRes.json();
           if (systemStatus.value.active_model) {
             selectedModel.value = systemStatus.value.active_model;
           }
         }
+        if (profileRes.ok) {
+          const prof = await profileRes.json();
+          if (prof && typeof prof.stars === 'number') {
+            drill.score.value = Math.max(drill.score.value, prof.stars);
+            drill.streak.value = Math.max(drill.streak.value, prof.streak || 0);
+            drill.persistScore();
+            drill.persistStreak();
+          }
+        }
       } catch (e) {
-        console.warn('Status fetch failed:', e);
+        console.warn('Status/Profile fetch failed:', e);
       }
 
       await drill.loadDrills();

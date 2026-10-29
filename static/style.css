@@ -2553,3 +2553,291 @@ kbd {
   background: #1d4ed8;
 }
 
+/* ==================== 研习模式切换 Pill ==================== */
+.practice-mode-pills {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+.mode-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.mode-pill-btn:hover {
+  color: #f8fafc;
+}
+.mode-pill-btn.active {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+}
+
+/* ==================== AI 影子跟读评测卡片 ==================== */
+.drill-shadow-section {
+  background: #13151f;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 24px 32px 30px;
+}
+.shadow-card-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+.shadow-target-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 19px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+.shadow-word-pill {
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+  transition: all 0.25s;
+}
+.shadow-word-pill.matched {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #34d399;
+}
+.shadow-word-pill.missed {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: rgba(244, 63, 94, 0.4);
+  color: #fb7185;
+}
+
+.shadow-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 8px 0;
+}
+.shadow-record-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 28px;
+  border-radius: 9999px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+.shadow-record-btn.start {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 18px rgba(37, 99, 235, 0.35);
+}
+.shadow-record-btn.start:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(37, 99, 235, 0.5);
+}
+.shadow-record-btn.recording {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  color: #ffffff;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+  animation: pulseSlotLine 1.5s infinite;
+}
+.shadow-evaluating-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  border-radius: 9999px;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.shadow-score-banner {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.shadow-score-banner.pass {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+.score-number-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;
+  color: #e2e8f0;
+}
+.score-number-badge strong {
+  font-size: 20px;
+  color: #38bdf8;
+}
+.shadow-score-banner.pass .score-number-badge strong {
+  color: #34d399;
+}
+.score-recognized-line {
+  font-size: 13px;
+  color: #94a3b8;
+}
+.score-recognized-line .text {
+  color: #f1f5f9;
+  font-style: italic;
+}
+.score-reward-tip {
+  font-size: 13px;
+  color: #34d399;
+  font-weight: 500;
+}
+
+/* ==================== 艾宾浩斯今日待复习横幅 (SRS) ==================== */
+.notebook-stats-pills {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.notebook-stats-pills .muted-count.due {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.25);
+}
+.notebook-stats-pills .muted-count.mastered {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.srs-due-banner {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 14px;
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.srs-banner-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.srs-banner-head .title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #60a5fa;
+}
+.srs-banner-head .desc {
+  font-size: 12.5px;
+  color: #94a3b8;
+  margin: 0;
+}
+.srs-cards-track {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.srs-mini-card {
+  background: rgba(20, 24, 39, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.2s;
+}
+.srs-mini-card:hover {
+  border-color: rgba(59, 130, 246, 0.4);
+}
+.srs-en {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #f8fafc;
+  cursor: pointer;
+}
+.srs-en:hover {
+  color: #38bdf8;
+}
+.srs-zh {
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+.srs-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.srs-btn {
+  flex: 1;
+  padding: 4px 0;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.srs-btn.forgot {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+.srs-btn.forgot:hover {
+  background: rgba(239, 68, 68, 0.3);
+  color: #ffffff;
+}
+.srs-btn.fuzzy {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+.srs-btn.fuzzy:hover {
+  background: rgba(245, 158, 11, 0.3);
+  color: #ffffff;
+}
+.srs-btn.master {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+.srs-btn.master:hover {
+  background: rgba(16, 185, 129, 0.3);
+  color: #ffffff;
+}
+
