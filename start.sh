@@ -63,10 +63,10 @@ if [ "$VENV_OK" = false ]; then
     echo "✅ 环境就绪！"
 fi
 
-# 3. 检查模型状态
-if [ ! -f "models/kokoro-v1.0.onnx" ]; then
-    echo "⚠️ 提示: models/kokoro-v1.0.onnx 未检测到。"
-    echo "   请将模型文件放至 models/ 目录下以启用顶级离线神经发音。"
+# 3. 检查模型状态 (若缺失自动下载)
+if [ ! -f "models/kokoro-v1.0.onnx" ] || [ ! -f "models/voices-v1.0.bin" ]; then
+    echo "📥 未检测到 Kokoro 离线模型，正在自动下载模型权重 (首次运行约需 1~2 分钟)..."
+    ./venv/bin/python scripts/download_kokoro.py || echo "⚠️ 自动下载失败，您可以手动将 models 文件夹拷贝到项目中。"
 fi
 
 # 4. 检查 Ollama 本地模型服务
