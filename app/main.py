@@ -4,6 +4,7 @@ FastAPI backend powering Daily Conversation, Sentence Building, and AI Speech
 """
 
 import os
+import datetime
 from fastapi import FastAPI, HTTPException, Response, UploadFile, File, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -254,6 +255,7 @@ async def handle_transcribe(file: UploadFile = File(...)):
         transcribed_text = " ".join([s.text for s in segments]).strip()
 
         import os
+import datetime
         try: os.unlink(tmp_path)
         except: pass
 
@@ -261,6 +263,28 @@ async def handle_transcribe(file: UploadFile = File(...)):
     except Exception as e:
         print(f"[Transcribe Error] {e}")
         return {"status": "error", "text": "", "detail": str(e)}
+
+@app.get("/api/system/diagnostics")
+async def get_system_diagnostics():
+    """
+    一键导出诊断日志：包含系统状态、Kokoro 语音模型状态以及最近 150 行服务日志
+    """
+    log_tail = []
+    log_file = os.path.join(BASE_DIR, "data", "server.log")
+    if os.path.exists(log_file):
+        try:
+            with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
+                lines = f.readlines()
+                log_tail = [line.strip() for line in lines[-150:]]
+        except Exception as e:
+            log_tail = [f"Failed to read server.log: {e}"]
+
+    return {
+        "status": "online",
+        "timestamp": datetime.datetime.now().isoformat(),
+        "kokoro": check_kokoro_status(),
+        "recent_server_logs": log_tail
+    }
 
 # ----------------- Static Frontend -----------------
 

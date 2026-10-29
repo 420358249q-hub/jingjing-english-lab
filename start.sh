@@ -86,4 +86,5 @@ echo "🌐 启动 Web 服务器 (http://${HOST}:${PORT})..."
 # 自动在浏览器中打开页面
 (sleep 1.5 && open "http://${HOST}:${PORT}") &
 
-./venv/bin/uvicorn app.main:app --host "$HOST" --port "$PORT" --reload
+mkdir -p data
+./venv/bin/uvicorn app.main:app --host "$HOST" --port "$PORT" --reload 2>&1 | tee -a data/server.log
