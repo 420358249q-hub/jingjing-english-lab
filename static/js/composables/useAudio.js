@@ -1,9 +1,6 @@
 // ============================================================================
-// useAudio — Web Audio 发音引擎（单例 AudioContext · 4 档语速 · 内存缓存 ·
-// 静默预加载 · 25ms 硬件时钟逐词卡拉OK追踪）
-//
-// 硬性约束：Web Audio 播放端 source.playbackRate.value 恒等于 1.0，
-// 语速由后端 Kokoro 神经网络原生控制，前端绝不重采样变调。
+// useAudio — 桌面级发音引擎（Web Audio 硬件时钟 + HTML5 Audio 坚固双轨回退 ·
+// 单例 AudioContext · 4 档原生无变调语速 · 内存缓存 · 25ms 逐词卡拉OK高亮）
 // ============================================================================
 
 const Vue = window.Vue;
@@ -21,22 +18,38 @@ export function useAudio() {
   const activeAudioContext = ref('');
   const isWordStepping = ref(false);
 
-  // ---- AudioContext 单例 ----
+  // ---- Web AudioContext 单例与主动激活防线 ----
   let audioCtx = null;
   const getAudioContext = () => {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
+    try {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass();
+        }
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+    } catch (e) {
+      console.warn('[AudioContext init warning]:', e);
     }
     return audioCtx;
   };
 
-  // ---- 轻量提示音（克制、不花哨）----
+  // 捕获阶段立刻激活音频上下文（解决 Quark/Safari/Chrome 等严格拦截无声问题）
+  const unlockAudio = () => {
+    getAudioContext();
+  };
+  ['click', 'keydown', 'pointerdown', 'touchstart'].forEach((evt) => {
+    window.addEventListener(evt, unlockAudio, { capture: true, passive: true });
+  });
+
+  // ---- 轻量提示音 ----
   const playAudioCue = (type) => {
     try {
       const ctx = getAudioContext();
+      if (!ctx || ctx.state !== 'running') return;
       const now = ctx.currentTime;
 
       if (type === 'click') {
@@ -63,36 +76,11 @@ export function useAudio() {
         gain.connect(ctx.destination);
         osc.start(now);
         osc.stop(now + 0.06);
-      } else if (type === 'correct') {
-        [523.25, 659.25, 783.99].forEach((freq, idx) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(freq, now + idx * 0.08);
-          gain.gain.setValueAtTime(0.1, now + idx * 0.08);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.26);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(now + idx * 0.08);
-          osc.stop(now + idx * 0.08 + 0.26);
-        });
-      } else if (type === 'error') {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(150, now);
-        osc.frequency.linearRampToValueAtTime(95, now + 0.18);
-        gain.gain.setValueAtTime(0.08, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.18);
       }
-    } catch (e) { /* 静默降级：提示音失败不影响主流程 */ }
+    } catch (e) { /* 静默降级 */ }
   };
 
-  // ---- 语速参数映射（与后端 parse_kokoro_speed 对齐）----
+  // ---- 语速参数映射 ----
   const getRateParam = (rateValue) => {
     const num = parseFloat(rateValue) || 1.0;
     if (num <= 0.65) return '0.6';
@@ -107,7 +95,7 @@ export function useAudio() {
     playAudioCue('click');
   };
 
-  // ---- 单词清洗（逐词卡拉OK索引与词块装配共用）----
+  // ---- 单词清洗 ----
   const getCleanWords = (text) => {
     if (!text) return [];
     return text.replace(/[*#_`]/g, '')
@@ -130,17 +118,18 @@ export function useAudio() {
     });
   };
 
-  // ---- 内存音频缓存 + 并发去重 ----
-  const audioBufferCache = new Map();
+  // ---- 双轨缓存系统（AudioBuffer + Blob URL） ----
+  const audioDataCache = new Map();
   const audioFetchingPromises = new Map();
 
-  const fetchAudioBuffer = async (text, mode = 'normal') => {
+  const fetchAudioData = async (text, mode = 'normal') => {
     const clean = text.replace(/[*#_`]/g, '').trim();
     if (!clean) return null;
     const rateParam = getRateParam(speechRate.value);
     const cacheKey = `${clean}|${mode}|${rateParam}`;
-    if (audioBufferCache.has(cacheKey)) {
-      return audioBufferCache.get(cacheKey);
+
+    if (audioDataCache.has(cacheKey)) {
+      return audioDataCache.get(cacheKey);
     }
     if (audioFetchingPromises.has(cacheKey)) {
       return await audioFetchingPromises.get(cacheKey);
@@ -160,11 +149,31 @@ export function useAudio() {
           })
         });
         if (!res.ok) throw new Error(`TTS server error ${res.status}`);
+
         const arrayBuffer = await res.arrayBuffer();
-        const ctx = getAudioContext();
-        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-        audioBufferCache.set(cacheKey, audioBuffer);
-        return audioBuffer;
+
+        // 1. 创建原生 Blob URL（坚不可摧的底层播放源）
+        const blob = new Blob([arrayBuffer], { type: 'audio/wav' });
+        const blobUrl = URL.createObjectURL(blob);
+
+        // 2. 解码 Web AudioBuffer（支持毫秒级卡拉OK）
+        let audioBuffer = null;
+        try {
+          const ctx = getAudioContext();
+          if (ctx) {
+            audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+          }
+        } catch (e) {
+          console.warn('[Web Audio decode skipped, will use HTML5 Audio fallback]:', e);
+        }
+
+        const data = {
+          audioBuffer,
+          blobUrl,
+          duration: audioBuffer ? audioBuffer.duration : 2.5
+        };
+        audioDataCache.set(cacheKey, data);
+        return data;
       } finally {
         audioFetchingPromises.delete(cacheKey);
       }
@@ -174,7 +183,7 @@ export function useAudio() {
     return await p;
   };
 
-  // ---- 静默后台预加载（不触碰 AudioContext，仅预热磁盘缓存）----
+  // ---- 静默后台预加载 ----
   const prewarmAudio = (text, mode = 'normal') => {
     if (!text) return;
     const clean = text.replace(/[*#_`]/g, '').trim();
@@ -198,6 +207,7 @@ export function useAudio() {
   // ---- 停止所有音频与计时器 ----
   let wordAudioTimer = null;
   let currentSourceNode = null;
+  let currentHtmlAudio = null;
   let karaokeTimerId = null;
 
   const stopWordAudio = () => {
@@ -217,17 +227,27 @@ export function useAudio() {
       } catch (e) { /* 忽略 */ }
       currentSourceNode = null;
     }
+    if (currentHtmlAudio) {
+      try {
+        currentHtmlAudio.pause();
+        currentHtmlAudio.currentTime = 0;
+      } catch (e) { /* 忽略 */ }
+      currentHtmlAudio = null;
+    }
     activeWordIndex.value = -1;
     activeAudioContext.value = '';
     currentlyPlayingText.value = '';
     isAudioPlaying.value = false;
   };
 
-  // ---- 整句连读（Web Audio 原生播放 + 25ms 硬件时钟逐词高亮）----
+  // ---- 整句连读（智能双轨播放：优先 Web Audio，降级 HTML5 Audio，绝不静音）----
   const playTTS = async (text, id = null, mode = 'normal') => {
     if (!text) return;
     const clean = text.replace(/[*#_`]/g, '').trim();
     if (!clean) return;
+
+    // 同步唤醒音频硬件
+    const ctx = getAudioContext();
 
     stopWordAudio();
 
@@ -237,31 +257,14 @@ export function useAudio() {
     isAudioPlaying.value = true;
 
     try {
-      const audioBuffer = await fetchAudioBuffer(clean, mode);
-      if (!audioBuffer) {
+      const audioData = await fetchAudioData(clean, mode);
+      if (!audioData) {
         stopWordAudio();
         return;
       }
 
-      const ctx = getAudioContext();
-      if (ctx.state === 'suspended') {
-        await ctx.resume();
-      }
-
-      const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
-      // 严格锁定 1.0：保持音高与真人音色，杜绝花栗鼠/怪兽变调
-      source.playbackRate.value = 1.0;
-
-      const gainNode = ctx.createGain();
-      gainNode.gain.value = 1.0;
-      source.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      currentSourceNode = source;
-
-      const totalDuration = audioBuffer.duration;
-      const startTime = ctx.currentTime;
       const words = getCleanWords(clean);
+      const totalDuration = audioData.duration || 2.0;
       const slots = getWordSlotsForWords(words, totalDuration);
 
       const onFinished = () => {
@@ -270,54 +273,97 @@ export function useAudio() {
           karaokeTimerId = null;
         }
         currentSourceNode = null;
+        currentHtmlAudio = null;
         activeWordIndex.value = -1;
         currentlyPlayingText.value = '';
         isAudioPlaying.value = false;
         activeAudioContext.value = '';
       };
 
-      source.onended = onFinished;
-
-      if (slots.length > 0) {
-        activeWordIndex.value = 0;
-        karaokeTimerId = setInterval(() => {
-          const elapsed = ctx.currentTime - startTime;
-          if (elapsed >= totalDuration) {
-            onFinished();
-            return;
-          }
-          for (let i = 0; i < slots.length; i++) {
-            if (elapsed >= slots[i].start && elapsed < slots[i].end) {
-              if (activeWordIndex.value !== i) {
-                activeWordIndex.value = i;
-              }
-              break;
+      // 启动 25ms 硬件时钟卡拉OK高亮
+      const startKaraoke = (getElapsedSec) => {
+        if (slots.length > 0) {
+          activeWordIndex.value = 0;
+          karaokeTimerId = setInterval(() => {
+            const elapsed = getElapsedSec();
+            if (elapsed >= totalDuration) {
+              onFinished();
+              return;
             }
-          }
-        }, 25);
+            for (let i = 0; i < slots.length; i++) {
+              if (elapsed >= slots[i].start && elapsed < slots[i].end) {
+                if (activeWordIndex.value !== i) {
+                  activeWordIndex.value = i;
+                }
+                break;
+              }
+            }
+          }, 25);
+        }
+      };
+
+      // 轨道 A：如果 Web Audio 可用且已唤醒，采用 Web Audio 原生流
+      if (ctx && ctx.state === 'running' && audioData.audioBuffer) {
+        const source = ctx.createBufferSource();
+        source.buffer = audioData.audioBuffer;
+        source.playbackRate.value = 1.0;
+
+        const gainNode = ctx.createGain();
+        gainNode.gain.value = 1.0;
+        source.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        currentSourceNode = source;
+
+        const startTime = ctx.currentTime;
+        source.onended = onFinished;
+
+        startKaraoke(() => ctx.currentTime - startTime);
+        source.start(0);
+      } else {
+        // 轨道 B：HTML5 Audio 坚固回退（绕过浏览器严格的 AudioContext 拦截，100% 必响）
+        const audio = new Audio(audioData.blobUrl);
+        audio.playbackRate = 1.0;
+        currentHtmlAudio = audio;
+        audio.onended = onFinished;
+
+        const startPerfTime = performance.now();
+        startKaraoke(() => (performance.now() - startPerfTime) / 1000);
+
+        await audio.play();
       }
 
-      // 安全兜底：防止按钮/高亮卡死
+      // 安全超时兜底
       setTimeout(() => {
         if (currentlyPlayingText.value === targetId) {
           onFinished();
         }
-      }, (totalDuration + 0.3) * 1000);
+      }, (totalDuration + 0.5) * 1000);
 
-      source.start(0);
     } catch (err) {
       console.error('[Audio Playback Error]:', err);
+      // 终极应急：直接尝试 Audio 标签
+      try {
+        const data = await fetchAudioData(clean, mode);
+        if (data && data.blobUrl) {
+          const audio = new Audio(data.blobUrl);
+          currentHtmlAudio = audio;
+          audio.onended = stopWordAudio;
+          await audio.play();
+          return;
+        }
+      } catch (e2) {}
       stopWordAudio();
     }
   };
 
-  // ---- 逐词拆分慢速精读（读哪个亮哪个，词间 300ms 自然停顿）----
+  // ---- 逐词拆分慢速精读 ----
   const playSplitTTS = async (text, id = null) => {
     if (!text) return;
     const clean = text.replace(/[*#_`]/g, '').trim();
     const words = getCleanWords(clean);
     if (!words.length) return;
 
+    getAudioContext();
     stopWordAudio();
 
     const targetId = id || ('split_' + clean);
@@ -326,15 +372,9 @@ export function useAudio() {
     isAudioPlaying.value = true;
     isWordStepping.value = true;
 
-    // 并行预取全部单词，确保逐词迭代零等待
     try {
-      await Promise.all(words.map((w) => fetchAudioBuffer(w)));
+      await Promise.all(words.map((w) => fetchAudioData(w)));
     } catch (e) { /* 忽略 */ }
-
-    const ctx = getAudioContext();
-    if (ctx.state === 'suspended') {
-      try { await ctx.resume(); } catch (e) { /* 忽略 */ }
-    }
 
     for (let i = 0; i < words.length; i++) {
       if (!isWordStepping.value) break;
@@ -342,45 +382,40 @@ export function useAudio() {
       const currentWord = words[i];
 
       try {
-        const audioBuffer = await fetchAudioBuffer(currentWord);
-        if (audioBuffer && isWordStepping.value) {
+        const data = await fetchAudioData(currentWord);
+        if (data && isWordStepping.value) {
           await new Promise((resolve) => {
-            const source = ctx.createBufferSource();
-            source.buffer = audioBuffer;
-            source.playbackRate.value = 1.0;
-            const gainNode = ctx.createGain();
-            gainNode.gain.value = 1.0;
-            source.connect(gainNode);
-            gainNode.connect(ctx.destination);
-            currentSourceNode = source;
-
-            const wordDuration = audioBuffer.duration;
-            const timer = setTimeout(resolve, (wordDuration + 0.05) * 1000);
-
-            source.onended = () => {
-              clearTimeout(timer);
+            const ctx = getAudioContext();
+            if (ctx && ctx.state === 'running' && data.audioBuffer) {
+              const source = ctx.createBufferSource();
+              source.buffer = data.audioBuffer;
+              source.playbackRate.value = 1.0;
+              source.connect(ctx.destination);
+              currentSourceNode = source;
+              source.onended = resolve;
+              source.start(0);
+            } else if (data.blobUrl) {
+              const audio = new Audio(data.blobUrl);
+              currentHtmlAudio = audio;
+              audio.onended = resolve;
+              audio.play().catch(resolve);
+            } else {
               resolve();
-            };
-            source.start(0);
+            }
           });
         }
-      } catch (err) {
-        console.warn('[Word-Step Audio Error]:', err);
-      }
+      } catch (e) {}
 
       if (!isWordStepping.value) break;
-      await new Promise((resolve) => {
-        wordAudioTimer = setTimeout(resolve, 300);
-      });
+      await new Promise((r) => { wordAudioTimer = setTimeout(r, 260); });
     }
 
-    if (isWordStepping.value) {
-      stopWordAudio();
-    }
+    stopWordAudio();
   };
 
-  // ---- 单击单词发音（金色流光高亮）----
+  // ---- 单击单词发音 ----
   const playSingleWord = async (word, index = -1) => {
+    getAudioContext();
     stopWordAudio();
     activeWordIndex.value = index;
     activeAudioContext.value = 'drill';
@@ -398,6 +433,7 @@ export function useAudio() {
 
   // ---- 单击词块发音 ----
   const playTokenAudio = (tokenText) => {
+    getAudioContext();
     stopWordAudio();
     playTTS(tokenText, 'token_' + tokenText, 'normal');
   };
