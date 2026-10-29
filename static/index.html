@@ -20,7 +20,7 @@
       <div class="header-inner">
 
         <!-- 品牌 -->
-        <div class="brand" @click="activeTab = 'drill'">
+        <div class="brand" @click="activeTab = 'course'; courseViewMode = 'catalog'">
           <div class="brand-mark">
             <i class="ph-fill ph-graduation-cap"></i>
           </div>
@@ -35,8 +35,11 @@
 
         <!-- 导航 -->
         <nav class="nav-tabs">
+          <button class="nav-tab" :class="{ active: activeTab === 'course' }" @click="activeTab = 'course'">
+            <i class="ph-bold ph-graduation-cap"></i><span>课程大厅</span>
+          </button>
           <button class="nav-tab" :class="{ active: activeTab === 'drill' }" @click="activeTab = 'drill'">
-            <i class="ph-bold ph-squares-four"></i><span>研习</span>
+            <i class="ph-bold ph-squares-four"></i><span>自由研习</span>
           </button>
           <button class="nav-tab" :class="{ active: activeTab === 'talk' }" @click="activeTab = 'talk'">
             <i class="ph-bold ph-microphone"></i><span>口语对练</span>
@@ -71,6 +74,238 @@
 
     <!-- ==================== 主内容 ==================== -->
     <main class="page">
+
+      <!-- ========== 0. 课程体系（3级层级：大厅 -> 章节 -> 音标语法研习工坊） ========== -->
+      <div v-if="activeTab === 'course'" class="course-section">
+
+        <!-- Tier 1: 课程大厅 (Course Catalog) -->
+        <section v-if="courseViewMode === 'catalog'" class="course-catalog">
+          <div class="catalog-top-bar">
+            <div class="catalog-category-pills">
+              <button
+                v-for="cat in COURSE_CATEGORIES"
+                :key="cat.id"
+                class="catalog-cat-pill"
+                :class="{ active: selectedCategory === cat.id }"
+                @click="selectedCategory = cat.id">
+                <span>{{ cat.label }}</span>
+              </button>
+            </div>
+            <div class="catalog-request-link" @click="openCustomModal">
+              <i class="ph-bold ph-plus-circle"></i>
+              <span>想要更多课程</span>
+            </div>
+          </div>
+
+          <!-- 12 大爆款课程卡片网格 -->
+          <div class="course-grid">
+            <div
+              v-for="c in filteredCourses"
+              :key="c.id"
+              class="course-card"
+              @click="openCourse(c.id)">
+              <div class="course-cover" :style="{ background: c.cover_gradient }">
+                <i :class="'ph-fill ph-' + c.icon" class="course-cover-illustration"></i>
+                <div class="course-cover-title">{{ c.title }}</div>
+                <div class="course-cover-badge">{{ c.tag }}</div>
+              </div>
+              <div class="course-card-body">
+                <div class="course-card-title">{{ c.title }}</div>
+                <div class="course-card-subtitle">{{ c.english_title }}</div>
+                <div class="course-card-footer">
+                  <div class="course-hotness">
+                    <span class="hot-dot"></span>
+                    <i class="ph-fill ph-fire"></i>
+                    <span>{{ c.view_count }}</span>
+                  </div>
+                  <span>{{ c.chapter_count }} 章节 · {{ c.sentence_count }} 句</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tier 2: 课程章节列表 (Chapter Catalog) -->
+        <section v-if="courseViewMode === 'chapters' && currentCourse" class="chapters-container">
+          <div class="chapters-header">
+            <div class="chapters-header-left">
+              <button class="course-back-btn" @click="backToCatalog">
+                <i class="ph-bold ph-arrow-left"></i><span>返回大厅</span>
+              </button>
+              <div class="chapters-course-title">{{ currentCourse.title }}</div>
+            </div>
+
+            <div class="chapters-header-stats">
+              <div class="stat-pill-green">
+                <span>学习: {{ courseStudyTimeText }}</span>
+              </div>
+              <div class="stat-pill-blue">
+                <span>最近: {{ courseRecentTimeText }}</span>
+              </div>
+              <div class="chapters-progress-box">
+                <div class="progress-track">
+                  <div class="progress-fill" :style="{ width: courseProgressPercent + '%' }"></div>
+                </div>
+                <span class="progress-percent-label">{{ courseProgressPercent }}%</span>
+              </div>
+              <button class="reset-course-btn" @click="resetCurrentCourseProgress" title="清空本课学习记录">
+                <i class="ph-bold ph-trash"></i><span>重置进度</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 章节 4 列卡片流 -->
+          <div class="chapters-grid">
+            <div
+              v-for="ch in chapters"
+              :key="ch.id"
+              class="chapter-card"
+              :class="{ 'is-recent': ch.status === 'recent' }"
+              @click="openChapter(ch.id)">
+              <div class="chapter-card-head">
+                <div class="chapter-card-title">{{ ch.title }}</div>
+                <span class="chapter-badge" :class="ch.status">
+                  {{ ch.status === 'completed' ? '已完成练习' : (ch.status === 'recent' ? '最近练习' : '暂未练习') }}
+                </span>
+              </div>
+              <div class="chapter-card-footer">
+                <div class="chapter-meta-left">
+                  <span>⏱ 练习时长: {{ formatDuration(ch.duration_seconds) }}</span>
+                  <span>✓ 已完成{{ ch.completed_count }}次</span>
+                </div>
+                <span class="chapter-seq-num">#{{ ch.chapter_num }}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tier 3: 语法成分与音标研习工坊 (Drill Screen) -->
+        <section v-if="courseViewMode === 'practice' && currentDrill" class="practice-container">
+          <!-- 顶部工坊导航 -->
+          <div class="practice-top-bar">
+            <div class="practice-breadcrumbs">
+              <button class="course-back-btn" @click="backToChapters">
+                <i class="ph-bold ph-arrow-left"></i><span>返回章节</span>
+              </button>
+              <span class="practice-breadcrumb-title">
+                {{ currentCourse?.title }} · {{ currentChapter?.chapter_title }} (第 {{ currentDrillIndex + 1 }} / {{ chapterDrills.length }} 句)
+              </span>
+            </div>
+
+            <div class="practice-top-actions">
+              <div class="speed-selector">
+                <button class="speed-btn" :class="{ active: speechRate === 0.8 }" @click="setSpeechRate(0.8)">
+                  <span>0.8x 慢速</span>
+                </button>
+                <button class="speed-btn" :class="{ active: speechRate === 1.0 }" @click="setSpeechRate(1.0)">
+                  <span>1.0x 标准</span>
+                </button>
+                <button class="speed-btn" :class="{ active: speechRate === 1.2 }" @click="setSpeechRate(1.2)">
+                  <span>1.2x 快速</span>
+                </button>
+              </div>
+              <button class="top-action-pill" @click="revealAnswer" title="查看当前句子答案 (快捷键: ↓)">
+                <i class="ph-bold ph-lightbulb"></i><span>答案</span>
+              </button>
+              <button class="top-action-pill" @click="playCurrentDrillAudio" title="发音 (快捷键: Tab 或 Ctrl+A)">
+                <i class="ph-bold ph-speaker-high"></i><span>发音</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 核心研习舞台 -->
+          <div class="practice-stage">
+            <!-- 1. 语法与音标解析卡片 (Top Left Analysis Card) -->
+            <div class="drill-phonetic-card">
+              <div class="drill-chunks-row">
+                <div
+                  v-for="(chunk, cIdx) in currentDrill.chunks"
+                  :key="cIdx"
+                  class="chunk-column"
+                  @click="playChunkAudio(chunk.text)"
+                  :title="'点击单听: ' + chunk.text">
+                  <span class="chunk-ipa">{{ chunk.ipa || '' }}</span>
+                  <span class="chunk-text">{{ chunk.text }}</span>
+                  <span class="chunk-role-badge" :class="chunk.color">{{ chunk.role }}</span>
+                </div>
+              </div>
+
+              <div class="drill-translation-row">
+                <span class="drill-chinese-title">{{ currentDrill.chinese }}</span>
+                <button class="drill-tts-speaker-btn" @click="playCurrentDrillAudio">
+                  <i class="ph-bold ph-speaker-high"></i>
+                  <span>朗读整句</span>
+                  <kbd>Tab</kbd>
+                </button>
+              </div>
+            </div>
+
+            <!-- 2. 场景插图展示卡 (Thematic Illustration) -->
+            <div class="drill-scene-illustration">
+              <i class="ph-fill ph-hand-heart drill-scene-svg text-9xl"></i>
+              <div class="drill-scene-caption">
+                <i class="ph-bold ph-sparkle"></i>
+                <span>“{{ currentDrill.chinese }}”</span>
+              </div>
+            </div>
+
+            <!-- 3. 核心下划线槽位填空 (Interactive Underline Slots) -->
+            <div class="drill-slots-section">
+              <div class="slots-row">
+                <div
+                  v-for="(word, wIdx) in drillWords"
+                  :key="wIdx"
+                  class="word-slot"
+                  :class="{
+                    'is-active': activeWordSlot === wIdx && !isDrillCorrect,
+                    'is-empty': !userTypedWords[wIdx],
+                    'is-correct': isDrillCorrect
+                  }"
+                  @click="activeWordSlot = wIdx">
+                  <span class="slot-word-text">
+                    {{ userTypedWords[wIdx] || (wIdx === activeWordSlot ? '_' : '') }}
+                  </span>
+                  <div class="slot-underline"></div>
+                </div>
+              </div>
+              <div class="slot-hint-text">
+                <span v-if="showAnswerHint" class="text-blue-400 font-medium">提示：{{ currentDrill.english }}</span>
+                <span v-else>盲打跟读：键盘直接敲击英文字母输入 · 按空格跳格</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. 底部快捷键指示栏 (Shortcut Bar) -->
+          <div class="practice-bottom-bar">
+            <div class="shortcut-indicators">
+              <div class="shortcut-item">
+                <kbd>Ctrl A</kbd><span>朗读</span>
+              </div>
+              <div class="shortcut-item">
+                <kbd>Ctrl M</kbd><span>掌握</span>
+              </div>
+              <div class="shortcut-item">
+                <kbd>Ctrl Q</kbd><span>不熟悉</span>
+              </div>
+              <div class="shortcut-item">
+                <kbd>Space</kbd><span>提交</span>
+              </div>
+              <div class="shortcut-item">
+                <kbd>↓</kbd><span>答案</span>
+              </div>
+              <div class="shortcut-item">
+                <kbd>Shift ← / →</kbd><span>切题</span>
+              </div>
+            </div>
+
+            <button class="practice-next-btn" @click="nextChapterDrill">
+              <span>下一题</span>
+              <i class="ph-bold ph-arrow-right"></i>
+            </button>
+          </div>
+        </section>
+
+      </div>
 
       <!-- ========== 1. 造句研习区（双栏工作站） ========== -->
       <div v-if="activeTab === 'drill'" class="drill-layout">

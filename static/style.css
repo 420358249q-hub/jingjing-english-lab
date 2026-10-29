@@ -1510,3 +1510,733 @@ kbd {
   .drill-card { padding: 18px; }
   .word-interactive-span { font-size: 20px; }
 }
+
+/* ============================================================================
+   3-Tier Course System Styles (课程大厅 / 章节目录 / 音标语法研习工坊)
+   ============================================================================ */
+
+.course-section {
+  width: 100%;
+  max-width: 1360px;
+  margin: 0 auto;
+}
+
+/* ---------- Tier 1: 课程大厅 (Course Catalog) ---------- */
+.course-catalog {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.catalog-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.catalog-category-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px;
+  scrollbar-width: none;
+}
+.catalog-category-pills::-webkit-scrollbar { display: none; }
+
+.catalog-cat-pill {
+  padding: 6px 16px;
+  border-radius: 9999px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.catalog-cat-pill:hover {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.08);
+}
+.catalog-cat-pill.active {
+  color: #ffffff;
+  background: #2563eb;
+  border-color: #3b82f6;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+}
+
+.catalog-request-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+.catalog-request-link:hover {
+  color: #60a5fa;
+}
+
+.course-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 22px;
+}
+
+.course-card {
+  background: #141620;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s, box-shadow 0.25s;
+}
+.course-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(59, 130, 246, 0.15);
+}
+
+.course-cover {
+  height: 200px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.course-cover-illustration {
+  font-size: 48px;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 12px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.25));
+}
+
+.course-cover-title {
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.4;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(8px);
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  max-width: 90%;
+}
+
+.course-cover-badge {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.course-card-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.course-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #f1f5f9;
+  line-height: 1.35;
+}
+
+.course-card-subtitle {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+.course-card-footer {
+  margin-top: auto;
+  padding-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.course-hotness {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hot-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ec4899;
+  box-shadow: 0 0 6px #ec4899;
+}
+
+/* ---------- Tier 2: 课程章节列表 (Chapter Catalog) ---------- */
+.chapters-container {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.chapters-header {
+  background: #141620;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.chapters-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.course-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.course-back-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.chapters-course-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.chapters-header-stats {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.stat-pill-green {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 4px 14px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.stat-pill-blue {
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  padding: 4px 14px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.chapters-progress-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-track {
+  width: 140px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #06b6d4);
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.progress-percent-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  min-width: 36px;
+}
+
+.reset-course-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.reset-course-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.chapters-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+@media (max-width: 1200px) {
+  .chapters-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 880px) {
+  .chapters-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .chapters-grid { grid-template-columns: 1fr; }
+}
+
+.chapter-card {
+  background: #141620;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 110px;
+}
+.chapter-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.chapter-card.is-recent {
+  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%) !important;
+  border-color: #60a5fa !important;
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.35);
+}
+
+.chapter-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.chapter-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f1f5f9;
+  line-height: 1.4;
+  flex: 1;
+}
+.chapter-card.is-recent .chapter-card-title {
+  color: #ffffff;
+}
+
+.chapter-badge {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.chapter-badge.completed {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.chapter-badge.recent {
+  background: rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+.chapter-badge.unstarted {
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chapter-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #94a3b8;
+}
+.chapter-card.is-recent .chapter-card-footer {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.chapter-meta-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chapter-seq-num {
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+/* ---------- Tier 3: 语法成分与音标研习工坊 (Drill Screen) ---------- */
+.practice-container {
+  display: flex;
+  flex-direction: column;
+  background: #0d0e15;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  overflow: hidden;
+  min-height: 720px;
+}
+
+.practice-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: #141620;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.practice-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: #94a3b8;
+}
+.practice-breadcrumb-title {
+  color: #f1f5f9;
+  font-weight: 600;
+}
+
+.practice-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.top-action-pill {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+.top-action-pill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.practice-stage {
+  flex: 1;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 语法与音标解析卡片 (Top Left Analysis Card) */
+.drill-phonetic-card {
+  background: #151722;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.drill-chunks-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 24px;
+}
+
+.chunk-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.chunk-column:hover {
+  transform: translateY(-2px);
+}
+
+.chunk-ipa {
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 16px;
+  color: #38bdf8;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  min-height: 24px;
+}
+
+.chunk-text {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+
+.chunk-role-badge {
+  padding: 3px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+}
+.chunk-role-badge.purple {
+  background: #c026d3;
+  box-shadow: 0 2px 10px rgba(192, 38, 211, 0.45);
+}
+.chunk-role-badge.blue {
+  background: #2563eb;
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.45);
+}
+.chunk-role-badge.rose {
+  background: #e11d48;
+  box-shadow: 0 2px 10px rgba(225, 29, 72, 0.45);
+}
+.chunk-role-badge.emerald {
+  background: #059669;
+  box-shadow: 0 2px 10px rgba(5, 150, 105, 0.45);
+}
+.chunk-role-badge.amber {
+  background: #d97706;
+  box-shadow: 0 2px 10px rgba(217, 119, 6, 0.45);
+}
+
+.drill-translation-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.drill-chinese-title {
+  font-size: 19px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.drill-tts-speaker-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+.drill-tts-speaker-btn:hover {
+  background: #1d4ed8;
+}
+
+/* 场景插图展示卡 */
+.drill-scene-illustration {
+  height: 140px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+.drill-scene-svg {
+  opacity: 0.25;
+  position: absolute;
+}
+.drill-scene-caption {
+  font-size: 16px;
+  font-weight: 500;
+  color: #94a3b8;
+  z-index: 1;
+}
+
+/* 核心下划线槽位填空 (Underline Slot Area) */
+.drill-slots-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 30px 10px;
+}
+
+.slots-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
+}
+
+.word-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 60px;
+  cursor: text;
+  position: relative;
+}
+
+.slot-word-text {
+  font-size: 32px;
+  font-weight: 700;
+  color: #60a5fa;
+  min-height: 44px;
+  line-height: 44px;
+  letter-spacing: 1px;
+  user-select: none;
+}
+.word-slot.is-correct .slot-word-text {
+  color: #34d399;
+}
+.word-slot.is-empty .slot-word-text {
+  color: transparent;
+}
+
+.slot-underline {
+  width: 100%;
+  height: 3px;
+  background: #3b82f6;
+  border-radius: 2px;
+  transition: all 0.2s;
+}
+
+@keyframes pulseSlotLine {
+  0%, 100% { background: #60a5fa; box-shadow: 0 0 8px #60a5fa; }
+  50% { background: #93c5fd; box-shadow: 0 0 16px #93c5fd; }
+}
+
+.word-slot.is-active .slot-underline {
+  height: 4px;
+  animation: pulseSlotLine 1.2s infinite;
+}
+
+.slot-hint-text {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 6px;
+}
+
+/* 底部快捷键指示栏 */
+.practice-bottom-bar {
+  background: #141620;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.shortcut-indicators {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 13px;
+  color: #94a3b8;
+  overflow-x: auto;
+}
+
+.shortcut-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.shortcut-item kbd {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: monospace;
+  color: #f1f5f9;
+}
+
+.practice-next-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 18px;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+.practice-next-btn:hover {
+  background: #1d4ed8;
+}
+

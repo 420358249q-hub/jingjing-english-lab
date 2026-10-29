@@ -7,13 +7,14 @@ import { useAudio } from './composables/useAudio.js';
 import { useDrill, DRILL_CATEGORIES } from './composables/useDrill.js';
 import { useChat } from './composables/useChat.js';
 import { useNotebook } from './composables/useNotebook.js';
+import { useCourse } from './composables/useCourse.js';
 
 const { createApp, ref, onMounted, onUnmounted, watch } = window.Vue;
 
 const app = createApp({
   setup() {
     // ---- 全局 UI 状态 ----
-    const activeTab = ref('drill'); // 'drill' | 'talk' | 'report' | 'notebook' | 'settings'
+    const activeTab = ref('course'); // 'course' | 'drill' | 'talk' | 'report' | 'notebook' | 'settings'
     const showTargetText = ref(true); // 逐词看板“遮词考听力”开关
     const systemStatus = ref({
       ollama_connected: false,
@@ -30,6 +31,15 @@ const app = createApp({
     const notebook = useNotebook({ audio });
     const drill = useDrill({ audio });
     const chat = useChat({ audio, addScore: drill.addScore, selectedModel });
+    const course = useCourse({
+      audio,
+      onScoreAdd: (pts) => {
+        drill.score.value += pts;
+        drill.streak.value += 1;
+        drill.persistScore();
+        drill.persistStreak();
+      }
+    });
 
     // 语速切换后，静默预加载当前题在对应语速下的音频
     watch(() => audio.speechRate.value, () => {
@@ -107,6 +117,10 @@ const app = createApp({
 
       // 音频
       ...audio,
+
+      // 课程体系 (课程大厅/章节/工坊)
+      course,
+      ...course,
 
       // 造句研习
       ...drill,

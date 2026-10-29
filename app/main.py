@@ -33,6 +33,11 @@ from app.tts_engine import (
     synthesize_speech
 )
 from app.telemetry import report_telemetry_issue, get_telemetry_token
+from app.course_manager import (
+    get_courses_summary,
+    get_course_detail,
+    get_chapter_drills
+)
 
 app = FastAPI(title="静静学习系统 - AI 英语私教研习室")
 
@@ -116,6 +121,32 @@ async def get_system_status():
 @app.get("/api/scenarios")
 async def get_scenarios():
     return SCENARIOS
+
+# ----------------- Courses Endpoints (课程大厅 / 章节目录 / 研习工坊) -----------------
+
+@app.get("/api/courses")
+async def get_courses_endpoint(category: Optional[str] = None):
+    """获取所有课程概览列表（课程大厅，支持分类筛选）"""
+    courses = get_courses_summary()
+    if category and category != "all" and category != "全部":
+        return [c for c in courses if c.get("category") == category or c.get("category_name") == category]
+    return courses
+
+@app.get("/api/courses/{course_id}")
+async def get_course_detail_endpoint(course_id: str):
+    """获取指定课程的详细章节列表与统计"""
+    course = get_course_detail(course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    return course
+
+@app.get("/api/courses/{course_id}/chapters/{chapter_id}")
+async def get_chapter_drills_endpoint(course_id: str, chapter_id: str):
+    """获取指定课程指定章节的完整题目与音标语法分块数据"""
+    chapter_data = get_chapter_drills(course_id, chapter_id)
+    if not chapter_data:
+        raise HTTPException(status_code=404, detail="Chapter not found")
+    return chapter_data
 
 @app.get("/api/drills")
 async def get_drills(category: Optional[str] = None):
