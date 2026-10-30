@@ -84,6 +84,23 @@ export function useCourse({ audio, onScoreAdd } = {}) {
     if (audio && audio.playAudioCue) audio.playAudioCue('click');
   };
 
+  // 遮词默写控制（默认 false 遮住上方英文与音标，逼迫听音拼写默写；点击小眼睛或按 H 键显示/隐藏）
+  const SHOW_COURSE_TEXT_KEY = 'jjs_show_course_target_text';
+  const showCourseTargetText = ref(localStorage.getItem(SHOW_COURSE_TEXT_KEY) === 'true');
+  const peekingChunkIdx = ref(-1);
+
+  const toggleCourseTargetText = () => {
+    showCourseTargetText.value = !showCourseTargetText.value;
+    try {
+      localStorage.setItem(SHOW_COURSE_TEXT_KEY, String(showCourseTargetText.value));
+    } catch (e) {}
+    if (audio && audio.playAudioCue) audio.playAudioCue('click');
+  };
+
+  const toggleChunkPeek = (cIdx) => {
+    peekingChunkIdx.value = peekingChunkIdx.value === cIdx ? -1 : cIdx;
+  };
+
   // Progress store
   const storedProgress = ref(loadStoredProgress());
 
@@ -470,6 +487,7 @@ export function useCourse({ audio, onScoreAdd } = {}) {
     activeWordSlot.value = 0;
     isDrillCorrect.value = false;
     showAnswerHint.value = false;
+    peekingChunkIdx.value = -1;
     speechScore.value = null;
     speechRecognizedText.value = '';
     speechWordMatches.value = [];
@@ -771,6 +789,13 @@ export function useCourse({ audio, onScoreAdd } = {}) {
       return;
     }
 
+    // Ctrl + H / Alt + H: 切换遮词默写 / 显示原文 (小眼睛)
+    if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key === 'h' || e.key === 'H')) {
+      e.preventDefault();
+      toggleCourseTargetText();
+      return;
+    }
+
     // Shift + Right Arrow: 下一题
     if (e.shiftKey && e.key === 'ArrowRight') {
       e.preventDefault();
@@ -837,6 +862,10 @@ export function useCourse({ audio, onScoreAdd } = {}) {
     isDrillCorrect,
     showAnswerHint,
     drillPracticeMode,
+    showCourseTargetText,
+    peekingChunkIdx,
+    toggleCourseTargetText,
+    toggleChunkPeek,
     autoPlayDrillAudio,
     toggleAutoPlay,
     isRecordingSpeech,

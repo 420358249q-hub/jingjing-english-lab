@@ -13,6 +13,11 @@ export function useNotebook({ audio } = {}) {
   const srsStats = ref({ total: 0, due: 0, mastered: 0, total_reviews: 0 });
   const activeReviewCard = ref(null);
   const showReviewModal = ref(false);
+  const showNotebookEnglish = ref(true); // 生词本小眼睛开关
+
+  const toggleNotebookEnglish = () => {
+    showNotebookEnglish.value = !showNotebookEnglish.value;
+  };
 
   function loadNotebook() {
     try {
@@ -156,6 +161,8 @@ export function useNotebook({ audio } = {}) {
     srsStats,
     activeReviewCard,
     showReviewModal,
+    showNotebookEnglish,
+    toggleNotebookEnglish,
     addToNotebook,
     removeFromNotebook,
     submitReview,

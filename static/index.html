@@ -282,6 +282,15 @@
                   <span>1.2x 快速</span>
                 </button>
               </div>
+              <!-- 遮词默写小眼睛开关（默认开启遮词，隐藏上方英文答案，用户可随时点击或按 Ctrl+H 键显示/隐藏） -->
+              <button
+                class="top-action-pill eye-toggle-pill"
+                :class="{ 'is-hiding': !showCourseTargetText }"
+                @click="toggleCourseTargetText"
+                :title="showCourseTargetText ? '已显示英文（点击遮词开启听音默写，快捷键: Ctrl+H）' : '已遮词默写（点击显示英文答案，快捷键: Ctrl+H）'">
+                <i :class="'ph-bold ' + (showCourseTargetText ? 'ph-eye' : 'ph-eye-slash')"></i>
+                <span>{{ showCourseTargetText ? '显示原文' : '遮词默写' }}</span>
+              </button>
               <button class="top-action-pill" @click="revealAnswer" title="查看当前句子答案 (快捷键: ↓)">
                 <i class="ph-bold ph-lightbulb"></i><span>答案</span>
               </button>
@@ -309,16 +318,38 @@
                   v-for="(chunk, cIdx) in courseDrill.chunks"
                   :key="cIdx"
                   class="chunk-column"
-                  @click="playChunkAudio(chunk.text)"
-                  :title="'点击单听: ' + chunk.text">
-                  <span class="chunk-ipa">{{ chunk.ipa || '' }}</span>
-                  <span class="chunk-text">{{ chunk.text }}</span>
+                  :class="{
+                    'is-peeking': peekingChunkIdx === cIdx,
+                    'is-masked': !showCourseTargetText && !isDrillCorrect && !showAnswerHint && peekingChunkIdx !== cIdx
+                  }"
+                  @click="toggleChunkPeek(cIdx); playChunkAudio(chunk.text)"
+                  :title="'点击单听 / 点击偷看: ' + chunk.text">
+                  <span
+                    class="chunk-ipa"
+                    :class="{
+                      'is-hidden': !showCourseTargetText && !isDrillCorrect && !showAnswerHint && peekingChunkIdx !== cIdx
+                    }">{{ chunk.ipa || '' }}</span>
+                  <span
+                    class="chunk-text"
+                    :class="{
+                      'is-hidden': !showCourseTargetText && !isDrillCorrect && !showAnswerHint && peekingChunkIdx !== cIdx
+                    }">{{ chunk.text }}</span>
                   <span class="chunk-role-badge" :class="chunk.color">{{ chunk.role }}</span>
                 </div>
               </div>
 
               <div class="drill-translation-row">
-                <span class="drill-chinese-title">{{ courseDrill.chinese }}</span>
+                <div class="translation-left-wrap">
+                  <span class="drill-chinese-title">{{ courseDrill.chinese }}</span>
+                  <button
+                    class="card-eye-btn"
+                    :class="{ 'is-hiding': !showCourseTargetText }"
+                    @click="toggleCourseTargetText"
+                    :title="showCourseTargetText ? '点击遮住英文（开启默写模式）' : '点击显示英文原文'">
+                    <i :class="'ph-bold ' + (showCourseTargetText ? 'ph-eye' : 'ph-eye-slash')"></i>
+                    <span>{{ showCourseTargetText ? '遮词默写' : '显示答案' }}</span>
+                  </button>
+                </div>
                 <button class="drill-tts-speaker-btn" @click="playCurrentDrillAudio">
                   <i class="ph-bold ph-speaker-high"></i>
                   <span>朗读整句</span>
@@ -438,6 +469,9 @@
             <div class="shortcut-indicators">
               <div class="shortcut-item">
                 <kbd>Ctrl A</kbd><span>朗读</span>
+              </div>
+              <div class="shortcut-item">
+                <kbd>Ctrl H</kbd><span>遮词/显示</span>
               </div>
               <div class="shortcut-item">
                 <kbd>Ctrl M</kbd><span>掌握</span>
@@ -892,6 +926,11 @@
             <span class="muted-count"><i class="ph-fill ph-books"></i> 收藏 {{ notebookItems.length }} 词</span>
             <span class="muted-count due"><i class="ph-fill ph-bell-ringing"></i> 今日待复习 {{ dueCards.length }} 词</span>
             <span class="muted-count mastered"><i class="ph-fill ph-check-circle"></i> 已掌握 {{ srsStats.mastered || 0 }} 词</span>
+            <!-- 生词本小眼睛遮词自测开关 -->
+            <button class="notebook-eye-toggle-btn" @click="toggleNotebookEnglish" :title="showNotebookEnglish ? '点击遮住英文（仅看中文默写测验）' : '点击显示英文单词'">
+              <i :class="'ph-bold ' + (showNotebookEnglish ? 'ph-eye' : 'ph-eye-slash')"></i>
+              <span>{{ showNotebookEnglish ? '遮词自测' : '显示英文' }}</span>
+            </button>
           </div>
         </div>
 
@@ -924,7 +963,7 @@
           <div v-for="item in notebookItems" :key="item.id" class="glass-panel notebook-card">
             <div class="notebook-card-body">
               <div class="zh">{{ item.chinese }}</div>
-              <div class="en">“{{ item.english }}”</div>
+              <div class="en" :class="{ 'word-blurred': !showNotebookEnglish }">“{{ item.english }}”</div>
             </div>
             <div class="notebook-card-foot">
               <span>{{ item.date }}</span>
