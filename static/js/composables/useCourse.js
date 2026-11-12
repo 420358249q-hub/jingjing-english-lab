@@ -69,8 +69,20 @@ export function useCourse({ audio, onScoreAdd } = {}) {
   const speechScore = ref(null);
   const speechRecognizedText = ref('');
   const speechWordMatches = ref([]);
+  const userRecordedAudioUrl = ref(null);
+  const isUserAudioPlaying = ref(false);
+  let userAudioElement = null;
   let mediaRecorder = null;
   let audioChunks = [];
+
+  // 词块一键加入生词本 Toast 提示
+  const chunkSavedToast = ref('');
+
+  // 错题 / 重点攻坚过滤模式 ('all' 全部 | 'unfamiliar' 易错重点)
+  const drillFilterMode = ref('all');
+
+  // 触屏 / iPad 虚拟软键盘输入引用
+  const hiddenSlotInput = ref(null);
 
   // 自动朗读控制（默认 false 关闭，用户点击“点击朗读”或 Tab 键才念）
   const AUTOPLAY_KEY = 'jjs_auto_play_drill';
@@ -361,8 +373,35 @@ export function useCourse({ audio, onScoreAdd } = {}) {
     }
   };
 
+  // 当前章节的易错 / 不熟悉题目 ID 列表
+  const currentChapterUnfamiliar = computed(() => {
+    if (!currentCourse.value || !currentChapter.value) return [];
+    const cid = currentCourse.value.id;
+    const chid = currentChapter.value.id;
+    const ch = storedProgress.value[cid]?.chapters?.[chid];
+    return ch?.unfamiliar || [];
+  });
+
+  // 根据当前过滤模式（全部 vs 错题）动态得到研习题目列表
+  const activeChapterDrills = computed(() => {
+    if (drillFilterMode.value === 'unfamiliar' && currentChapterUnfamiliar.value.length > 0) {
+      const set = new Set(currentChapterUnfamiliar.value);
+      const filtered = chapterDrills.value.filter(d => set.has(d.id));
+      return filtered.length > 0 ? filtered : chapterDrills.value;
+    }
+    return chapterDrills.value;
+  });
+
+  const toggleDrillFilterMode = (mode) => {
+    drillFilterMode.value = mode;
+    courseDrillIndex.value = 0;
+    initDrillSlotState();
+    prewarmDrillAudio();
+    if (audio && audio.playAudioCue) audio.playAudioCue('click');
+  };
+
   const courseDrill = computed(() => {
-    return chapterDrills.value[courseDrillIndex.value] || null;
+    return activeChapterDrills.value[courseDrillIndex.value] || null;
   });
   const currentDrill = courseDrill;
 
@@ -491,13 +530,22 @@ export function useCourse({ audio, onScoreAdd } = {}) {
     speechScore.value = null;
     speechRecognizedText.value = '';
     speechWordMatches.value = [];
+    if (userAudioElement) {
+      userAudioElement.pause();
+      userAudioElement = null;
+    }
+    isUserAudioPlaying.value = false;
+    if (userRecordedAudioUrl.value) {
+      try { URL.revokeObjectURL(userRecordedAudioUrl.value); } catch(e) {}
+      userRecordedAudioUrl.value = null;
+    }
   };
 
   const prewarmDrillAudio = () => {
     const drill = courseDrill.value;
     if (!drill || !audio || !audio.prewarmAudio) return;
     if (drill.english) audio.prewarmAudio(drill.english);
-    const nextDrill = chapterDrills.value[courseDrillIndex.value + 1];
+    const nextDrill = activeChapterDrills.value[courseDrillIndex.value + 1];
     if (nextDrill && nextDrill.english) audio.prewarmAudio(nextDrill.english);
   };
 
@@ -513,6 +561,29 @@ export function useCourse({ audio, onScoreAdd } = {}) {
   const playChunkAudio = (text) => {
     if (!text || !audio || !audio.playTTS) return;
     audio.playTTS(text, 'chunk_' + text);
+  };
+
+  // 词块一键收藏入生词本 (In-line add chunk directly to SQLite Notebook)
+  const saveChunkToNotebook = async (chunk) => {
+    if (!chunk || !chunk.text) return;
+    const en = chunk.text.trim();
+    const role = chunk.role || '重点短语';
+    const zh = courseDrill.value ? `${courseDrill.value.chinese} (${role})` : role;
+    if (audio && audio.playAudioCue) audio.playAudioCue('pop');
+
+    try {
+      const res = await fetch('/api/cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ english: en, chinese: zh, source: currentCourse.value ? currentCourse.value.title : '课程研习' })
+      });
+      if (res.ok) {
+        chunkSavedToast.value = `已加入生词本: "${en}"`;
+        setTimeout(() => { if (chunkSavedToast.value.includes(en)) chunkSavedToast.value = ''; }, 2400);
+      }
+    } catch (e) {
+      console.warn('[saveChunkToNotebook error]:', e);
+    }
   };
 
   // ---- AI 影子跟读 (Shadow Reading) 录音与实时发音评测 ----
@@ -534,6 +605,10 @@ export function useCourse({ audio, onScoreAdd } = {}) {
       isRecordingSpeech.value = true;
       speechScore.value = null;
       speechRecognizedText.value = '';
+      if (userRecordedAudioUrl.value) {
+        try { URL.revokeObjectURL(userRecordedAudioUrl.value); } catch(e) {}
+        userRecordedAudioUrl.value = null;
+      }
       if (audio && audio.playAudioCue) audio.playAudioCue('click');
     } catch (e) {
       alert('请开启浏览器麦克风权限以体验 AI 影子跟读评测');
@@ -550,6 +625,12 @@ export function useCourse({ audio, onScoreAdd } = {}) {
 
   const evaluateShadowSpeech = async (audioBlob) => {
     try {
+      // 保持用户录音用于回听与原声 A/B 对比
+      if (userRecordedAudioUrl.value) {
+        try { URL.revokeObjectURL(userRecordedAudioUrl.value); } catch(e) {}
+      }
+      userRecordedAudioUrl.value = URL.createObjectURL(audioBlob);
+
       const formData = new FormData();
       formData.append('file', audioBlob, 'speech.webm');
       const res = await fetch('/api/transcribe', {
@@ -584,6 +665,53 @@ export function useCourse({ audio, onScoreAdd } = {}) {
       console.warn('[Shadow evaluation error]:', e);
     } finally {
       isEvaluatingSpeech.value = false;
+    }
+  };
+
+  // 播放跟读本人录音
+  const playUserRecording = () => {
+    if (!userRecordedAudioUrl.value) return;
+    if (userAudioElement) {
+      userAudioElement.pause();
+      userAudioElement.currentTime = 0;
+    }
+    userAudioElement = new Audio(userRecordedAudioUrl.value);
+    isUserAudioPlaying.value = true;
+    userAudioElement.onended = () => { isUserAudioPlaying.value = false; };
+    userAudioElement.onerror = () => { isUserAudioPlaying.value = false; };
+    userAudioElement.play().catch(() => { isUserAudioPlaying.value = false; });
+  };
+
+  const stopUserRecording = () => {
+    if (userAudioElement) {
+      userAudioElement.pause();
+      isUserAudioPlaying.value = false;
+    }
+  };
+
+  // 触屏 / iPad 虚拟软键盘唤起
+  const focusSlotInput = (wIdx) => {
+    if (typeof wIdx === 'number') {
+      activeWordSlot.value = wIdx;
+    }
+    if (hiddenSlotInput.value) {
+      hiddenSlotInput.value.focus();
+    }
+  };
+
+  const onMobileSlotKeydown = (e) => {
+    if (e.key === 'Backspace' || e.key === ' ' || e.key === 'Enter') {
+      handleKeyInput(e.key);
+    }
+  };
+
+  const onMobileSlotInput = (e) => {
+    const val = e.target.value;
+    if (val) {
+      for (const char of val) {
+        handleKeyInput(char);
+      }
+      e.target.value = '';
     }
   };
 
@@ -692,7 +820,7 @@ export function useCourse({ audio, onScoreAdd } = {}) {
   };
 
   const nextChapterDrill = () => {
-    if (courseDrillIndex.value < chapterDrills.value.length - 1) {
+    if (courseDrillIndex.value < activeChapterDrills.value.length - 1) {
       courseDrillIndex.value += 1;
       initDrillSlotState();
       prewarmDrillAudio();
@@ -719,12 +847,47 @@ export function useCourse({ audio, onScoreAdd } = {}) {
 
   const markMastered = () => {
     if (!courseDrill.value) return;
-    recordDrillCompletion(courseDrill.value.id);
+    const drillId = courseDrill.value.id;
+    recordDrillCompletion(drillId);
+
+    // 从不熟悉错题集中剔除
+    if (currentCourse.value && currentChapter.value) {
+      const cid = currentCourse.value.id;
+      const chid = currentChapter.value.id;
+      const p = storedProgress.value;
+      if (p[cid]?.chapters?.[chid]?.unfamiliar?.includes(drillId)) {
+        p[cid].chapters[chid].unfamiliar = p[cid].chapters[chid].unfamiliar.filter(id => id !== drillId);
+        saveStoredProgress(p);
+        syncProgressToBackend(p);
+      }
+    }
+
     if (audio && audio.playAudioCue) audio.playAudioCue('pop');
     nextChapterDrill();
   };
 
   const markUnfamiliar = () => {
+    if (!courseDrill.value || !currentCourse.value || !currentChapter.value) return;
+    const drillId = courseDrill.value.id;
+    const cid = currentCourse.value.id;
+    const chid = currentChapter.value.id;
+    const p = storedProgress.value;
+
+    if (!p[cid]) p[cid] = { total_seconds: 0, chapters: {} };
+    if (!p[cid].chapters[chid]) {
+      p[cid].chapters[chid] = { seconds: 0, status: 'recent', completed_count: 0, mastered: [], unfamiliar: [] };
+    }
+    const ch = p[cid].chapters[chid];
+    if (!ch.unfamiliar) ch.unfamiliar = [];
+    if (!ch.unfamiliar.includes(drillId)) {
+      ch.unfamiliar.push(drillId);
+    }
+    saveStoredProgress(p);
+    syncProgressToBackend(p);
+
+    chunkSavedToast.value = '已加入易错重点集';
+    setTimeout(() => { if (chunkSavedToast.value === '已加入易错重点集') chunkSavedToast.value = ''; }, 2000);
+
     if (audio && audio.playAudioCue) audio.playAudioCue('pop');
     revealAnswer();
   };
@@ -851,6 +1014,10 @@ export function useCourse({ audio, onScoreAdd } = {}) {
     chapters,
     currentChapter,
     chapterDrills,
+    activeChapterDrills,
+    currentChapterUnfamiliar,
+    drillFilterMode,
+    toggleDrillFilterMode,
     courseDrillIndex,
     currentDrillIndex: courseDrillIndex,
     courseDrill,
@@ -873,8 +1040,18 @@ export function useCourse({ audio, onScoreAdd } = {}) {
     speechScore,
     speechRecognizedText,
     speechWordMatches,
+    userRecordedAudioUrl,
+    isUserAudioPlaying,
+    playUserRecording,
+    stopUserRecording,
     startShadowRecording,
     stopShadowRecording,
+    chunkSavedToast,
+    saveChunkToNotebook,
+    hiddenSlotInput,
+    focusSlotInput,
+    onMobileSlotKeydown,
+    onMobileSlotInput,
     courseStudyTimeText,
     courseRecentTimeText,
     courseProgressPercent,

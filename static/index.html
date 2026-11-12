@@ -55,8 +55,11 @@
           </button>
         </nav>
 
-        <!-- 右侧状态 -->
+        <!-- 右侧状态与操作 -->
         <div class="header-status">
+          <button class="manual-trigger-btn" @click="showManualModal = true" title="查看静静学习系统使用说明书与极客快捷键">
+            <i class="ph-bold ph-book-open"></i><span>研习说明书</span>
+          </button>
           <div class="status-pill">
             <span class="dot" :class="systemStatus.ollama_connected ? 'ok' : 'warn'"></span>
             <span class="mono">{{ systemStatus.active_model || 'Local' }}</span>
@@ -247,9 +250,28 @@
               <button class="course-back-btn" @click="backToChapters">
                 <i class="ph-bold ph-arrow-left"></i><span>返回章节</span>
               </button>
-              <span class="practice-breadcrumb-title">
-                {{ currentCourse?.title }} · {{ currentChapter?.chapter_title }} (第 {{ courseDrillIndex + 1 }} / {{ chapterDrills.length }} 句)
-              </span>
+              <div class="practice-title-wrap">
+                <span class="practice-breadcrumb-title">
+                  {{ currentCourse?.title }} · {{ currentChapter?.chapter_title }} (第 {{ courseDrillIndex + 1 }} / {{ activeChapterDrills.length }} 句)
+                </span>
+                <!-- 重点攻坚 / 全部题目模式切换 -->
+                <div class="drill-filter-pills" v-if="currentChapterUnfamiliar && currentChapterUnfamiliar.length > 0">
+                  <button
+                    class="filter-pill-btn"
+                    :class="{ active: drillFilterMode === 'all' }"
+                    @click="toggleDrillFilterMode('all')">
+                    全部 ({{ chapterDrills.length }})
+                  </button>
+                  <button
+                    class="filter-pill-btn mistake"
+                    :class="{ active: drillFilterMode === 'unfamiliar' }"
+                    @click="toggleDrillFilterMode('unfamiliar')"
+                    title="集中攻坚本章标记为不熟悉或易错的题目">
+                    <i class="ph-fill ph-fire"></i>
+                    <span>重点攻坚 ({{ currentChapterUnfamiliar.length }})</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div class="practice-top-actions">
@@ -324,6 +346,13 @@
                   }"
                   @click="toggleChunkPeek(cIdx); playChunkAudio(chunk.text)"
                   :title="'点击单听 / 点击偷看: ' + chunk.text">
+                  <!-- 一键加入生词本悬浮小图标 -->
+                  <button
+                    class="chunk-bookmark-btn"
+                    @click.stop="saveChunkToNotebook(chunk)"
+                    :title="'将短语「' + chunk.text + '」一键加入生词本'">
+                    <i class="ph-bold ph-bookmark-simple"></i>
+                  </button>
                   <span
                     class="chunk-ipa"
                     :class="{
@@ -336,6 +365,12 @@
                     }">{{ chunk.text }}</span>
                   <span class="chunk-role-badge" :class="chunk.color">{{ chunk.role }}</span>
                 </div>
+              </div>
+
+              <!-- 词块收藏/重点标记 Toast 提示 -->
+              <div v-if="chunkSavedToast" class="chunk-toast-pill animate-fade-in">
+                <i class="ph-fill ph-check-circle"></i>
+                <span>{{ chunkSavedToast }}</span>
               </div>
 
               <div class="drill-translation-row">
@@ -383,6 +418,17 @@
 
             <!-- 3.A 核心下划线槽位填空 (Interactive Underline Slots) -->
             <div v-if="drillPracticeMode === 'typing'" class="drill-slots-section">
+              <!-- 触屏 / iPad 虚拟软键盘透明输入桥接 -->
+              <input
+                ref="hiddenSlotInput"
+                class="slot-hidden-mobile-input"
+                type="text"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+                @keydown="onMobileSlotKeydown"
+                @input="onMobileSlotInput" />
               <div class="slots-row">
                 <div
                   v-for="(word, wIdx) in drillWords"
@@ -393,7 +439,7 @@
                     'is-empty': !userTypedWords[wIdx],
                     'is-correct': isDrillCorrect
                   }"
-                  @click="activeWordSlot = wIdx">
+                  @click="focusSlotInput(wIdx)">
                   <span class="slot-word-text">
                     {{ userTypedWords[wIdx] || (wIdx === activeWordSlot ? '_' : '') }}
                   </span>
@@ -456,6 +502,28 @@
                     <span class="label">识别转写：</span>
                     <span class="text">“{{ speechRecognizedText || '未录入清晰声音' }}”</span>
                   </div>
+
+                  <!-- A/B 双轨原声与本人录音对比回放 -->
+                  <div class="shadow-audio-compare-row">
+                    <button
+                      v-if="userRecordedAudioUrl"
+                      class="shadow-compare-btn user"
+                      :class="{ playing: isUserAudioPlaying }"
+                      @click="playUserRecording"
+                      title="回放刚才录制的声音">
+                      <i :class="'ph-fill ' + (isUserAudioPlaying ? 'ph-stop' : 'ph-play')"></i>
+                      <span>{{ isUserAudioPlaying ? '正在回放我的录音…' : '🎧 回听我的跟读' }}</span>
+                    </button>
+                    <button
+                      class="shadow-compare-btn native"
+                      :class="{ playing: isAudioPlaying }"
+                      @click="playCurrentDrillAudio"
+                      title="播放母语纯正原声对比音准">
+                      <i class="ph-fill ph-speaker-high"></i>
+                      <span>🔊 对比母语原声</span>
+                    </button>
+                  </div>
+
                   <div v-if="speechScore >= 75" class="score-reward-tip">
                     <span>✨ 太棒了！发音纯正饱满 (+20 学习积分)</span>
                   </div>
@@ -854,6 +922,34 @@
           </button>
         </div>
 
+        <!-- 30 天连续自习打卡热力图 -->
+        <div class="glass-panel heatmap-panel">
+          <div class="heatmap-header">
+            <div class="heatmap-title">
+              <i class="ph-fill ph-calendar-check text-emerald-400"></i>
+              <span>30 天自习连续打卡热力分布</span>
+            </div>
+            <div class="heatmap-legend">
+              <span class="legend-text">每日研习强度：</span>
+              <span class="legend-item"><span class="legend-cell level-0"></span>空闲</span>
+              <span class="legend-item"><span class="legend-cell level-1"></span>入门</span>
+              <span class="legend-item"><span class="legend-cell level-2"></span>精练</span>
+              <span class="legend-item"><span class="legend-cell level-3"></span>进阶</span>
+              <span class="legend-item"><span class="legend-cell level-4"></span>沉浸</span>
+            </div>
+          </div>
+          <div class="heatmap-grid">
+            <div
+              v-for="(day, dIdx) in activityHeatmap"
+              :key="dIdx"
+              class="heatmap-cell"
+              :class="'level-' + day.level"
+              :title="day.date + ' · ' + (day.count > 0 ? ('已完成 ' + day.count + ' 轮研习造句') : '当日未打卡')">
+              <span class="heatmap-day-label">{{ day.date.slice(8) }}</span>
+            </div>
+          </div>
+        </div>
+
         <div v-if="isEvaluating" class="glass-panel loading-panel">
           <i class="ph-bold ph-circle-notch animate-spin"></i>
           <p>本地大模型正在生成 6 维深度诊断…</p>
@@ -1106,6 +1202,232 @@
           <button class="action-btn" @click="closeCustomModal">取消</button>
           <button class="btn-primary" :disabled="!generatedPreviewDrills.length" @click="saveAndPlayCustomDrills">
             <i class="ph-bold ph-floppy-disk"></i>保存并进入研习 ({{ generatedPreviewDrills.length }} 关)
+          </button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- ========== 6. 版本更新推送公告弹窗 (v2.2.0 Launch Announcement) ========== -->
+    <div v-if="showUpdateModal" class="modal-backdrop update-modal-overlay">
+      <div class="modal-card update-modal-card">
+        <header class="modal-head">
+          <div class="update-modal-title">
+            <div class="update-version-badge">v2.2.0</div>
+            <div>
+              <h3>🎉 静静学习系统 · 全新升级发布</h3>
+              <p>本次版本带来 5 项重大核心重构与研习体验跃升</p>
+            </div>
+          </div>
+          <button class="modal-close-btn" @click="dismissUpdateModal" title="关闭"><i class="ph-bold ph-x"></i></button>
+        </header>
+
+        <div class="modal-body update-modal-body">
+          <div class="update-features-list">
+            <div class="update-feature-item">
+              <div class="feature-icon sky"><i class="ph-fill ph-headphones"></i></div>
+              <div class="feature-content">
+                <h4>影子跟读 A/B 双轨回放对比</h4>
+                <p>完成发音评测后，新增「回听我的录音」与「对比母语原声」快捷切换，听觉直观辨识连读、弱读与发音细微瑕疵。</p>
+              </div>
+            </div>
+
+            <div class="update-feature-item">
+              <div class="feature-icon emerald"><i class="ph-fill ph-bookmark-simple"></i></div>
+              <div class="feature-content">
+                <h4>工坊语法词块一键入生词库</h4>
+                <p>造句卡片上的每个语法词块右上角新增书签收藏按钮，轻点即刻收录进生词手账，依托艾宾浩斯 SM-2 科学排期复习。</p>
+              </div>
+            </div>
+
+            <div class="update-feature-item">
+              <div class="feature-icon amber"><i class="ph-fill ph-fire"></i></div>
+              <div class="feature-content">
+                <h4>错题攻坚与生疏专项突破</h4>
+                <p>研习顶部支持一键在「全部题目」与「重点攻坚」之间自由切换，专项攻克标记为不熟悉（Ctrl+Q）或打错的难句。</p>
+              </div>
+            </div>
+
+            <div class="update-feature-item">
+              <div class="feature-icon indigo"><i class="ph-fill ph-device-tablet"></i></div>
+              <div class="feature-content">
+                <h4>iPad / 移动端触屏软键盘盲打</h4>
+                <p>全面优化触屏与平板交互，轻触下划线槽位即刻唤起移动端系统软键盘，直接敲击字母即可智能跳格输入。</p>
+              </div>
+            </div>
+
+            <div class="update-feature-item">
+              <div class="feature-icon violet"><i class="ph-fill ph-calendar-check"></i></div>
+              <div class="feature-content">
+                <h4>30 天连续自习打卡热力图</h4>
+                <p>诊断报告页全新引入 30 天自习全景热力分布图，实时记录量化每天的沉浸研习频次，见证自律语感的稳步蜕变。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="modal-foot update-modal-foot">
+          <button class="action-btn" @click="showManualModal = true; dismissUpdateModal()">
+            <i class="ph-bold ph-book-open"></i><span>查阅系统研习说明书</span>
+          </button>
+          <button class="btn-primary" @click="dismissUpdateModal">
+            <i class="ph-bold ph-rocket-launch"></i><span>立即开启自习体验</span>
+          </button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- ========== 7. 系统极客研习说明书弹窗 (User Manual Modal) ========== -->
+    <div v-if="showManualModal" class="modal-backdrop manual-modal-overlay" @click.self="showManualModal = false">
+      <div class="modal-card manual-modal-card">
+        <header class="modal-head">
+          <div class="manual-modal-title">
+            <i class="ph-bold ph-book-open text-sky-400"></i>
+            <div>
+              <h3>静静学习系统 · 极客研习与使用说明书</h3>
+              <p>沉浸式造句工坊 · 影子跟读评测 · 艾宾浩斯记忆调度</p>
+            </div>
+          </div>
+          <button class="modal-close-btn" @click="showManualModal = false" title="关闭"><i class="ph-bold ph-x"></i></button>
+        </header>
+
+        <div class="modal-body manual-modal-body">
+          <!-- 篇章 1: 核心研习闭环 -->
+          <section class="manual-section">
+            <div class="manual-section-head">
+              <i class="ph-fill ph-lightbulb"></i>
+              <h4>一、五阶闭环研习法则 (Core Methodology)</h4>
+            </div>
+            <div class="manual-steps-grid">
+              <div class="manual-step-card">
+                <div class="step-num">01</div>
+                <h5>音标与语块感知</h5>
+                <p>利用主谓宾结构着色与 IPA 国际音标标注，建立句子意群断句直觉，从“逐词翻译”跃迁为“词块思维”。</p>
+              </div>
+              <div class="manual-step-card">
+                <div class="step-num">02</div>
+                <h5>盲打槽位拼写</h5>
+                <p>无需使用鼠标，全键盘直接敲击字母，敲击空格自动跳转下一个词槽，Tab 一键呼叫标准母语发音。</p>
+              </div>
+              <div class="manual-step-card">
+                <div class="step-num">03</div>
+                <h5>遮词默写深度沉浸</h5>
+                <p>点击「遮词默写」小眼睛或按快捷键 <code>Ctrl + H</code> 隐藏上方英文，进入看中文直接盲打默写挑战。</p>
+              </div>
+              <div class="manual-step-card">
+                <div class="step-num">04</div>
+                <h5>Whisper 影子跟读</h5>
+                <p>切换至「影子跟读」模式，麦克风录入发音，本地 Whisper 神经模型逐词比对发音契合度，支持 A/B 双轨原声对比。</p>
+              </div>
+              <div class="manual-step-card">
+                <div class="step-num">05</div>
+                <h5>错题攻坚与 SM-2 手账</h5>
+                <p>疑难词块右上角书签一键入生词库，易错题目自动归入「重点攻坚集」，遵循艾宾浩斯遗忘曲线科学复习。</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- 篇章 2: 极客无鼠标快捷键字典 -->
+          <section class="manual-section">
+            <div class="manual-section-head">
+              <i class="ph-fill ph-keyboard"></i>
+              <h4>二、极客全键盘快捷键字典 (Keyboard Shortcuts)</h4>
+            </div>
+            <div class="manual-table-wrap">
+              <table class="manual-shortcuts-table">
+                <thead>
+                  <tr>
+                    <th style="width: 22%">快捷按键</th>
+                    <th style="width: 38%">功能指令</th>
+                    <th style="width: 40%">研习应用场景</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><kbd>Tab</kbd></td>
+                    <td>朗读整句标准母语原声</td>
+                    <td>造句工坊 / 听音输入前确认发音节奏</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>Space</kbd></td>
+                    <td>槽位跳格 / 判定当前输入</td>
+                    <td>单词输入完毕后快速跳入下一个词槽</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>Backspace</kbd></td>
+                    <td>删除字母 / 回退前一个槽位</td>
+                    <td>输入错误时光标无缝回跳修改</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>Ctrl</kbd> + <kbd>A</kbd></td>
+                    <td>播放当前标准母语音频</td>
+                    <td>研习过程中随时复听句子原声</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>Ctrl</kbd> + <kbd>H</kbd></td>
+                    <td>遮词默写 / 显示英文答案</td>
+                    <td>在“默写模式”与“原句对照”间极速切换</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>Ctrl</kbd> + <kbd>M</kbd></td>
+                    <td>标记为「已掌握」</td>
+                    <td>句子已熟练掌握，直接通关并跳至下一句</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>Ctrl</kbd> + <kbd>Q</kbd></td>
+                    <td>标记为「不熟悉 / 重点攻坚」</td>
+                    <td>将生疏或易错句子收入本章重点攻坚专项集</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>Esc</kbd></td>
+                    <td>返回章节列表 / 关闭弹窗</td>
+                    <td>在任何研习或弹窗界面一键退出</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- 篇章 3: 自定义课文解析 -->
+          <section class="manual-section">
+            <div class="manual-section-head">
+              <i class="ph-fill ph-file-plus"></i>
+              <h4>三、自定义教材与网络美文一键切词 (Custom Drills)</h4>
+            </div>
+            <p class="manual-prose">
+              在课程库点击右上角的「<strong>+ 自定义课文</strong>」，直接粘贴任意网络英文新闻、外刊美文、美剧对白或工作邮件。本地部署的大模型将自动进行：
+              <code>自然断句</code> ➔ <code>主谓宾意群切块</code> ➔ <code>IPA 国际音标标注</code> ➔ <code>中文地道对照</code>。
+              生成完毕后即可永久保存在你的专属课程库中，随时随地开启盲打研习。
+            </p>
+          </section>
+
+          <!-- 篇章 4: 离线私有与安全架构 -->
+          <section class="manual-section">
+            <div class="manual-section-head">
+              <i class="ph-fill ph-shield-check"></i>
+              <h4>四、离线私有与数据存储说明 (Privacy & Architecture)</h4>
+            </div>
+            <div class="manual-security-grid">
+              <div class="security-card">
+                <i class="ph-fill ph-database text-sky-400"></i>
+                <div>
+                  <h6>本地 SQLite 数据库持久化</h6>
+                  <p>所有课程学习进度、生词手账、艾宾浩斯复习调度数据完全保存在本地 SQLite 数据库中，绝不上报云端，安全可控。</p>
+                </div>
+              </div>
+              <div class="security-card">
+                <i class="ph-fill ph-waveform text-emerald-400"></i>
+                <div>
+                  <h6>本地神经 TTS 与 Whisper 评测</h6>
+                  <p>发音跟读录音采用本地内存 Blob 双轨缓存比对，语音评测由本地运行的 Whisper 神经引擎驱动，零流量消耗。</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <footer class="modal-foot">
+          <button class="btn-primary" @click="showManualModal = false">
+            <i class="ph-bold ph-check"></i><span>我已知晓，开启研习</span>
           </button>
         </footer>
       </div>

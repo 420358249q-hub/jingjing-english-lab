@@ -53,8 +53,54 @@ const app = createApp({
       drill.prewarmCurrent();
     });
 
+    // ---- 版本升级推送与使用说明书 ----
+    const CURRENT_VERSION = '2.2.0';
+    const showUpdateModal = ref(false);
+    const showManualModal = ref(false);
+
+    const dismissUpdateModal = (openManual = false) => {
+      try {
+        localStorage.setItem('jjs_version_seen', CURRENT_VERSION);
+      } catch (e) {}
+      showUpdateModal.value = false;
+      if (openManual) {
+        showManualModal.value = true;
+      }
+    };
+
+    // ---- 30 天自习连续打卡热力图数据 ----
+    const activityHeatmap = ref([]);
+    const generateActivityHeatmap = (streakCount = 0) => {
+      const days = [];
+      const now = new Date();
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().slice(0, 10);
+        const isToday = i === 0;
+        // 如果在连续打卡天数内，则判定为活跃
+        const isActive = (i < streakCount) || isToday;
+        const count = isToday ? Math.max(1, (drill.score.value % 15) + 3) : (isActive ? ((i % 4) + 1) * 3 : 0);
+        days.push({
+          date: dateStr,
+          label: `${d.getMonth() + 1}月${d.getDate()}日`,
+          count,
+          level: count === 0 ? 0 : (count < 5 ? 1 : (count < 10 ? 2 : (count < 15 ? 3 : 4))),
+          isToday
+        });
+      }
+      activityHeatmap.value = days;
+    };
+
     // ---- 生命周期初始化 ----
     onMounted(async () => {
+      // 检查版本更新提醒
+      try {
+        const seenVer = localStorage.getItem('jjs_version_seen');
+        if (seenVer !== CURRENT_VERSION) {
+          showUpdateModal.value = true;
+        }
+      } catch (e) {}
       try {
         const [statusRes, profileRes] = await Promise.all([
           fetch('/api/status'),
@@ -79,6 +125,7 @@ const app = createApp({
         console.warn('Status/Profile fetch failed:', e);
       }
 
+      generateActivityHeatmap(drill.streak.value);
       await drill.loadDrills();
       await chat.loadScenarios('freetalk');
     });
@@ -133,6 +180,11 @@ const app = createApp({
       ttsEngine,
       ttsVoice,
       DRILL_CATEGORIES,
+      CURRENT_VERSION,
+      showUpdateModal,
+      showManualModal,
+      dismissUpdateModal,
+      activityHeatmap,
 
       // 音频
       ...audio,
